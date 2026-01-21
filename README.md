@@ -100,7 +100,7 @@ Jeśli chcesz uruchomić projekt na własnym komputerze:
 
 Jako osoba zainteresowana cyberbezpieczeństwem, zauważyłam, że wiele materiałów skupia się wyłącznie na narzędziach (Kali Linux, Metasploit). Brakowało mi źródła, które uczyłoby **strategii audytu** i **myślenia analitycznego** przed uruchomieniem skanera.
 
-Ten projekt jest moim "poligonem doświadczalnym" oraz dowodem kompetencji (Proof of Work) w zakresie rozumienia bezpieczeństwa aplikacji webowych od strony ofensywnej (Red) i defensywnej (Blue).
+Ten projekt jest moim "poligonem doświadczalnym" oraz dowodem kompetencji w zakresie rozumienia bezpieczeństwa aplikacji webowych od strony ofensywnej (Red) i defensywnej (Blue).
 
 ---
 
@@ -109,6 +109,20 @@ Ten projekt jest moim "poligonem doświadczalnym" oraz dowodem kompetencji (Proo
 *Informacje zawarte w tym projekcie służą wyłącznie celom edukacyjnym. Autorka nie ponosi odpowiedzialności za niewłaściwe wykorzystanie przedstawionych technik. Testuj tylko systemy, do których masz pisemne upoważnienie.*
 
 ---
+
+## 🔒 Decyzje Architektoniczne i Model Zagrożeń
+
+Projekt został zaprojektowany jako **statyczna aplikacja (Client-Side Only)** hostowana na GitHub Pages. Ze względu na ten model architektoniczny, podjęto świadome decyzje dotyczące bezpieczeństwa (Risk Acceptance):
+
+1.  **Logika po stronie klienta:** Weryfikacja odpowiedzi quizu odbywa się w przeglądarce (`quiz.js`). Użytkownik techniczny może "oszukać" system edytując zmienne lub LocalStorage.
+    *   *Uzasadnienie:* Aplikacja służy do samo-nauki, nie przetwarza danych wrażliwych ani nie prowadzi rankingów. Wdrożenie backendu do weryfikacji było zbędne z punktu widzenia celu biznesowego.
+2.  **Polityka CSP (Content Security Policy):** Zastosowano dyrektywę `'unsafe-inline'` dla skryptów i stylów.
+    *   *Uzasadnienie:* Ze względu na edukacyjny charakter projektu i brak zewnętrznych zależności (npm), ryzyko XSS jest zminimalizowane. Pozwoliło to na uproszczenie struktury plików bez konieczności wdrażania mechanizmu Nonce.
+
+**Aplikacja nie przetwarza, nie składuje ani nie przesyła żadnych danych użytkowników.**
+
+---
+
 ## ⚖️ Licencja i Prawa Autorskie
 
 Ten projekt jest udostępniony na licencji **Creative Commons Uznanie autorstwa-Użycie niekomercyjne-Na tych samych warunkach 4.0 Międzynarodowe (CC BY-NC-SA 4.0)**.
