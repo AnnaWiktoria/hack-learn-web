@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="AnnaWiktoria">
+    <meta name="copyright" content="AnnaWiktoria">
+    <meta name="description" content="Interaktywny kurs bezpieczeństwa aplikacji webowych. Licencja CC BY-NC-SA.">
+
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; 
+               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
+               font-src 'self' https://fonts.gstatic.com; 
+               script-src 'self' 'unsafe-inline'; 
+               img-src 'self' data:;">
+
+    <title>Kurs bezpieczeństwa aplikacji webowych - Hack & Learn: Web Edition</title>
+
+    <!-- Podpięcie głównego stylu -->
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Indywidualny akcent dla tej lekcji: Cyan (Klimat HTTP/Web) */
+        :root {
+            --accent: #00e5ff;
+            --accent-glow: rgba(0, 229, 255, 0.3);
+        }
+
+        .http-part {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .req-line {
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>METODY HTTP</h1>
+            <p>MODUŁ 01: Budowa protokołu, żądania, odpowiedzi i metody</p>
+        </header>
+
+        <!-- SEKCJA 0: WPROWADZENIE DO HTTP (NOWA) -->
+        <section>
+            <h2>> PROTOKÓŁ HTTP</h2>
+            <p><strong>HTTP (Hypertext Transfer Protocol)</strong> to język, w którym przeglądarka (Klient) rozmawia z
+                serwerem. Jest to protokół tekstowy i bezstanowy (stateless).</p>
+
+            <div class="card">
+                <h3>CYKL ŻYCIA KOMUNIKACJI</h3>
+                <ol>
+                    <li><strong>KLIENT (Ty):</strong> Wysyła <em>Żądanie (Request)</em> – np. "Daj mi plik index.html".
+                    </li>
+                    <li><strong>SERWER:</strong> Przetwarza żądanie (szuka pliku, pyta bazę danych).</li>
+                    <li><strong>SERWER:</strong> Odsyła <em>Odpowiedź (Response)</em> – np. "Oto treść pliku" lub "Nie
+                        znaleziono".</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- SEKCJA 0.5: ANATOMIA (NOWA) -->
+        <section>
+            <h2>> ANATOMIA ŻĄDANIA (REQUEST)</h2>
+            <p>To wysyła Twoja przeglądarka (lub Burp Suite). Składa się z 3 części:</p>
+
+            <div class="card">
+                <span class="http-part">// 1. Linia startowa (Request Line): METODA + ŚCIEŻKA + WERSJA</span>
+                <pre
+                    class="req-line"><code><span class="method-badge m-get">GET</span> <span class="highlight">/produkty/laptop?id=5</span> <span class="param">HTTP/1.1</span></code></pre>
+
+                <span class="http-part">// 2. Nagłówki (Headers): KLUCZ: WARTOŚĆ</span>
+                <pre><code>Host: sklep.example.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0...)
+Accept: text/html,application/json
+Cookie: session_id=xyz123</code></pre>
+
+                <span class="http-part">// 3. Ciało (Body) - oddzielone pustą linią (często puste przy GET)</span>
+                <pre><code><span class="comment">(pusta linia)</span>
+<span class="comment">(brak danych w metodzie GET)</span></code></pre>
+            </div>
+
+            <h2>> ANATOMIA ODPOWIEDZI (RESPONSE)</h2>
+            <p>To odsyła serwer:</p>
+
+            <div class="card">
+                <span class="http-part">// 1. Linia statusu: WERSJA + KOD + OPIS</span>
+                <pre
+                    class="req-line"><code><span class="param">HTTP/1.1</span> <span class="status-badge s-2xx">200</span> <span class="highlight">OK</span></code></pre>
+
+                <span class="http-part">// 2. Nagłówki odpowiedzi</span>
+                <pre><code>Server: Apache/2.4.41
+Content-Type: text/html; charset=UTF-8
+Content-Length: 1234</code></pre>
+
+                <span class="http-part">// 3. Ciało (Body) - właściwa treść</span>
+                <pre><code><span class="comment">(pusta linia)</span>
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+  &lt;body&gt;
+    &lt;h1&gt;Witaj w sklepie!&lt;/h1&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+            </div>
+        </section>
+
+        <!-- SEKJA 1: METODY -->
+        <section>
+            <h2>> DEFINICJA OPERACJI (METODY)</h2>
+            <p>Metoda HTTP (pierwsze słowo w żądaniu) określa intencję operacji. Zrozumienie, co metoda
+                <strong>powinna</strong> robić, a co <strong>faktycznie</strong> robi, jest kluczem do znalezienia wielu
+                błędów logicznych.
+            </p>
+
+            <div class="card">
+                <h3>LISTA METOD</h3>
+                <ul>
+                    <li style="margin-bottom:10px;"><span class="method-badge m-get">GET</span> <strong>Pobierz
+                            dane.</strong> Nie powinna zmieniać stanu serwera (parametry w URL).</li>
+                    <li style="margin-bottom:10px;"><span class="method-badge m-post">POST</span> <strong>Wyślij /
+                            Utwórz.</strong> Przetwarza dane ukryte w Body. Zmienia stan.</li>
+                    <li style="margin-bottom:10px;"><span class="method-badge m-put">PUT</span>
+                        <strong>Nadpisz.</strong> Zastępuje cały zasób pod danym URL.
+                    </li>
+                    <li style="margin-bottom:10px;"><span class="method-badge m-patch">PATCH</span>
+                        <strong>Edytuj.</strong> Zmienia fragment zasobu.
+                    </li>
+                    <li style="margin-bottom:10px;"><span class="method-badge m-delete">DELETE</span>
+                        <strong>Usuń.</strong> Kasuje zasób.
+                    </li>
+                    <li><span class="method-badge m-options">OPTIONS</span> <strong>Zapytaj.</strong> Sprawdza dozwolone
+                        metody i CORS.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- SEKCJA 2: IDEMPOTENCJA -->
+        <section>
+            <h2>> IDEMPOTENCJA & BEZPIECZEŃSTWO</h2>
+            <p>To kluczowe pojęcia, których brakuje 90% początkujących. Ich naruszenie prowadzi do błędów CSRF i Logic
+                Flaws.</p>
+
+            <div class="card">
+                <ul>
+                    <li><strong>Safe method (Bezpieczna):</strong> Tylko odczyt. Wywołanie nie zmienia nic w bazie
+                        danych.<br>
+                        <em class="comment">// Przykłady: GET, HEAD, OPTIONS.</em>
+                    </li>
+                    <li><strong>Idempotent method (Idempotentna):</strong> Wielokrotne wykonanie tego samego żądania
+                        daje ten sam efekt końcowy, co jednokrotne.<br>
+                        <em class="comment">// Przykłady: DELETE (jak usuniesz plik raz, to go nie ma; jak spróbujesz
+                            drugi raz, nadal go nie ma), PUT.</em>
+                    </li>
+                </ul>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metoda</th>
+                        <th>Safe (Read-only)</th>
+                        <th>Idempotent</th>
+                        <th>Ryzyko Security</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-badge m-get">GET</span></td>
+                        <td>✅ TAK</td>
+                        <td>✅ TAK</td>
+                        <td>Sensitive Data in URL, CSRF (jeśli źle użyta)</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-badge m-post">POST</span></td>
+                        <td>❌ NIE</td>
+                        <td>❌ NIE</td>
+                        <td>Brak tokenów CSRF, Błędy logiki biznesowej</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-badge m-put">PUT</span></td>
+                        <td>❌ NIE</td>
+                        <td>✅ TAK</td>
+                        <td>IDOR, Mass Assignment</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-badge m-delete">DELETE</span></td>
+                        <td>❌ NIE</td>
+                        <td>✅ TAK</td>
+                        <td>IDOR (usuwanie cudzych danych)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- SEKCJA 3: PERSPEKTYWA PENTESTERA -->
+        <section>
+            <h2>> WEKTORY ATAKU</h2>
+            <p>Jak wykorzystujemy metody HTTP w praktyce?</p>
+
+            <div class="card">
+                <h3>SCENARIUSZ 1: GET zmieniający stan (CSRF)</h3>
+                <p>Programista stworzył endpoint: <code>GET /delete?id=5</code>.</p>
+                <pre><code><span class="comment"># Payload wysłany ofierze (np. na forum w obrazku)</span>
+&lt;img src="https://bank.com/delete?id=5"&gt;</code></pre>
+                <p><strong>Skutek:</strong> Przeglądarka ofiary próbuje pobrać "obrazek", wykonując żądanie GET. Konto
+                    zostaje usunięte bez wiedzy użytkownika. <br><span class="highlight">Wniosek: GET nigdy nie powinien
+                        zmieniać stanu!</span></p>
+            </div>
+
+            <div class="card">
+                <h3>SCENARIUSZ 2: IDOR na REST API</h3>
+                <p>API często używa schematu <code>/users/{id}</code>. Jesteś zalogowany jako User A (ID: 100).</p>
+                <pre><code><span class="method-badge m-put">PUT</span> /users/<span class="highlight">105</span> HTTP/1.1
+Host: api.site.com
+Cookie: session_id=... (Ty masz ID 100)
+
+{"email": "hacker@evil.com"}</code></pre>
+                <p><strong>Błąd:</strong> Serwer sprawdza, czy jesteś zalogowany, ale NIE sprawdza, czy masz prawo
+                    edytować ID 105. Przejąłeś konto innego użytkownika.</p>
+            </div>
+
+            <div class="card">
+                <h3>SCENARIUSZ 3: Metoda OPTIONS</h3>
+                <p>Widzisz API. Pytasz serwer: "Co tu wolno?".</p>
+                <pre><code><span class="method-badge m-options">OPTIONS</span> /api/admin HTTP/1.1
+Host: target.com</code></pre>
+                <p>Odpowiedź serwera:</p>
+                <pre><code>HTTP/1.1 200 OK
+Allow: GET, POST, <span class="highlight">DELETE</span>
+Access-Control-Allow-Origin: *</code></pre>
+                <p><strong>Znalezisko:</strong> Istnieje metoda DELETE (może ukryta?) oraz konfiguracja CORS pozwala na
+                    dostęp z każdej domeny.</p>
+            </div>
+        </section>
+
+        <!-- CHECKLIST -->
+        <section>
+            <h2>CHECKLISTA / RED FLAGS</h2>
+            <div class="card checklist-card">
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>GET modyfikujący dane:</strong> Zmiana hasła lub usuwanie danych przez GET to
+                        zaproszenie do CSRF.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Wrażliwe dane w URL:</strong> Tokeny API lub hasła w parametrach GET (zostają w
+                        historii przeglądarki i logach proxy).</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>API bez autoryzacji na PUT/DELETE:</strong> Programiści często chronią GET, a
+                        zapominają o metodach edycji.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Security by Obscurity (POST):</strong> Używanie POST do pobierania danych tylko po to,
+                        by "ukryć" parametry w Body. To nie działa na pentesterów.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QUIZ -->
+        <section id="quiz-section">
+            <h2>🎓 TEST WIEDZY</h2>
+            <!-- Kontener na pytania - wypełniany automatycznie przez quiz.js -->
+            <div id="quiz-container"></div>
+        </section>
+
+        <footer>
+            <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | Moduł
+                01</p>
+        </footer>
+    </div>
+
+    <!-- DANE DO QUIZU -->
+    <script>
+        const quizData = [
+            {
+                question: "Co oznacza, że metoda HTTP jest 'idempotentna'?",
+                options: [
+                    "Jest zaszyfrowana i bezpieczna przed podsłuchaniem.",
+                    "Nie zmienia stanu serwera (jest tylko do odczytu).",
+                    "Wielokrotne wykonanie tego samego żądania daje ten sam efekt końcowy, co jednokrotne.",
+                    "Wymaga uwierzytelnienia przy każdym zapytaniu."
+                ],
+                correct: 2,
+                explanation: "Idempotencja gwarantuje przewidywalność. Jeśli usuniesz plik raz (DELETE), nie ma go. Jeśli wyślesz to żądanie jeszcze 5 razy, pliku nadal nie ma - stan systemu się nie pogarsza."
+            },
+            {
+                question: "Która z poniższych metod jest technicznie 'Safe' (Bezpieczna/Tylko do odczytu)?",
+                options: [
+                    "POST",
+                    "DELETE",
+                    "PUT",
+                    "OPTIONS"
+                ],
+                correct: 3,
+                explanation: "Metody Safe (GET, HEAD, OPTIONS) służą tylko do pobierania informacji i nie powinny modyfikować danych na serwerze."
+            },
+            {
+                type: "scenario",
+                question: "Podczas rekonesansu odkrywasz URL: 'GET /user/delete?id=123'. Dlaczego jest to błąd bezpieczeństwa?",
+                options: [
+                    "To prawidłowa implementacja REST.",
+                    "Naruszenie zasad protokołu. GET nie powinien zmieniać stanu. Aplikacja jest podatna na prosty atak CSRF.",
+                    "To jest SQL Injection.",
+                    "Błąd typu Buffer Overflow."
+                ],
+                correct: 1,
+                explanation: "Użycie GET do usuwania danych pozwala atakującemu spreparować link (np. w tagu img), który nieświadomie kliknięty przez ofiarę, wykona akcję usunięcia konta."
+            },
+            {
+                question: "Dlaczego przesyłanie hasła w parametrach URL metody GET jest błędem (nawet przy HTTPS)?",
+                options: [
+                    "Bo HTTPS nie szyfruje URL.",
+                    "Bo URL (z parametrami) zostaje zapisany w historii przeglądarki, logach serwera i nagłówkach Referer.",
+                    "Bo GET ma limit 8 znaków.",
+                    "Bo Burp Suite tego nie widzi."
+                ],
+                correct: 1,
+                explanation: "Mimo że HTTPS szyfruje transmisję, pełny URL jest logowany w wielu miejscach w postaci otwartego tekstu (plain text)."
+            },
+            {
+                type: "scenario",
+                question: "Testujesz API. Endpoint 'PUT /users/100' pozwala Ci zmienić email. Zmieniasz ID w URL na 101 i też działa (zmieniasz dane innego usera). Co znalazłeś?",
+                options: [
+                    "XSS (Cross-Site Scripting)",
+                    "IDOR (Insecure Direct Object Reference)",
+                    "CSRF (Cross-Site Request Forgery)",
+                    "RCE (Remote Code Execution)"
+                ],
+                correct: 1,
+                explanation: "IDOR występuje, gdy aplikacja ufa numerowi ID podanemu przez użytkownika w URL bez sprawdzenia uprawnień do tego konkretnego obiektu."
+            },
+            {
+                question: "Do czego pentester używa metody OPTIONS?",
+                options: [
+                    "Do resetowania hasła admina.",
+                    "Do sprawdzenia obsługiwanych metod HTTP i konfiguracji CORS (Access-Control-Allow-Origin).",
+                    "Do wgrywania plików.",
+                    "Do wywołania błędu 500."
+                ],
+                correct: 1,
+                explanation: "OPTIONS to zwiad. Pytasz serwer: 'Co mi wolno?'. Odpowiedź może ujawnić np. włączone metody DELETE czy niebezpiecznie luźny CORS."
+            },
+            {
+                question: "Czym różni się PUT od PATCH?",
+                options: [
+                    "PUT nadpisuje cały zasób, PATCH modyfikuje fragment.",
+                    "PUT służy do tworzenia, PATCH do usuwania.",
+                    "Nie ma różnicy.",
+                    "PATCH jest bezpieczniejszy bo jest szyfrowany podwójnie."
+                ],
+                correct: 0,
+                explanation: "PUT oczekuje pełnego obiektu (zastępuje stary nowym). PATCH oczekuje instrukcji zmian (np. zmień tylko pole 'email')."
+            },
+            {
+                type: "scenario",
+                question: "Programista ukrył parametry wyszukiwania w ciele żądania POST (/search), żeby URL był 'czysty' i użytkownik nie widział parametrów. Jak to ocenisz?",
+                options: [
+                    "Świetna praktyka bezpieczeństwa.",
+                    "Security by Obscurity. Nie poprawia bezpieczeństwa (Burp i tak to widzi), a łamie semantykę HTTP.",
+                    "Krytyczny błąd pozwalający na przejęcie serwera.",
+                    "To jedyny sposób na obsługę polskich znaków."
+                ],
+                correct: 1,
+                explanation: "Ukrycie danych w POST nie czyni ich niewidocznymi dla pentestera. Dodatkowo POST nie jest cache'owany tak jak GET, co jest błędem przy wyszukiwarkach."
+            },
+            {
+                question: "Gdzie w surowym żądaniu HTTP znajduje się nagłówek Host?",
+                options: [
+                    "W ciele (Body).",
+                    "W pierwszej linii (Request Line).",
+                    "W sekcji nagłówków (2. część), jest obowiązkowy w HTTP/1.1.",
+                    "Jest generowany losowo."
+                ],
+                correct: 2,
+                explanation: "Host: example.com jest kluczowym nagłówkiem wymaganym przez standard HTTP/1.1. Często testuje się go pod kątem Host Header Injection."
+            },
+            {
+                type: "scenario",
+                question: "Wysyłasz żądanie: 'DELETE /file.txt'. Serwer odpowiada 200 OK. Wysyłasz to samo żądanie ponownie. Jaki powinien być stan serwera po drugim żądaniu?",
+                options: [
+                    "Plik powinien zostać odzyskany.",
+                    "Serwer powinien zwrócić błąd 500.",
+                    "Stan serwera powinien pozostać taki sam (plik nadal usunięty).",
+                    "Plik powinien zostać zduplikowany."
+                ],
+                correct: 2,
+                explanation: "Idempotencja oznacza, że powtarzanie operacji nie zmienia wyniku. Plik usunięty raz, pozostaje usunięty."
+            }
+        ];
+    </script>
+
+    <!-- Logika Quizu -->
+    <script src="quiz.js"></script>
+
+</body>
+
+</html>

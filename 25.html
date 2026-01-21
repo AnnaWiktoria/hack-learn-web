@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 25: Secure Architecture - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Shield Cyan (Defense / Protection) */
+        :root {
+            --accent: #00bcd4;
+            --accent-glow: rgba(0, 188, 212, 0.3);
+            --good: #00e676;
+            --bad: #ff1744;
+        }
+        
+        .header-name { color: #00bcd4; font-weight: bold; }
+        .header-value { color: #ccc; font-family: monospace; }
+        .secure-tag { background: rgba(0, 230, 118, 0.1); color: var(--good); padding: 2px 6px; border-radius: 4px; font-size: 0.8em; border: 1px solid var(--good); }
+        .insecure-tag { background: rgba(255, 23, 68, 0.1); color: var(--bad); padding: 2px 6px; border-radius: 4px; font-size: 0.8em; border: 1px solid var(--bad); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>SECURE ARCHITECTURE</h1>
+        <p>MODUŁ 25: Defense in Depth, CSP Hardening i HSTS Preload</p>
+    </header>
+
+    <!-- 1. DEFENSE IN DEPTH -->
+    <section>
+        <h2>> OBRONA W GŁĄB (DEFENSE IN DEPTH)</h2>
+        <p>W Blue Teamie nie wierzymy w "srebrną kulę". Zakładamy, że jedna warstwa padnie (np. programista popełni błąd XSS). Musi być druga warstwa, która zablokuje skutki tego błędu.</p>
+        
+        <div class="card">
+            <h3>ARCHITEKTURA WARSTWOWA</h3>
+            <ul>
+                <li><strong>Warstwa 1 (Kod):</strong> Walidacja danych i Sanityzacja (o tym w lekcji 26).</li>
+                <li><strong>Warstwa 2 (Nagłówki):</strong> CSP, HSTS - instrukcje dla przeglądarki.</li>
+                <li><strong>Warstwa 3 (Sieć):</strong> WAF (Web Application Firewall).</li>
+            </ul>
+            <p>Dziś zajmiemy się Warstwą 2 – czyli jak zmusić przeglądarkę, by broniła użytkownika.</p>
+        </div>
+    </section>
+
+    <!-- 2. CSP HARDENING -->
+    <section>
+        <h2>> CSP: JAK TO ZROBIĆ DOBRZE?</h2>
+        <p>Większość firm wdraża CSP źle (`unsafe-inline`). Jak wdrożyć CSP, które faktycznie blokuje XSS, a nie psuje strony?</p>
+
+        <div class="card">
+            <h3>ZŁOTE ZASADY CSP</h3>
+            <pre><code>Content-Security-Policy: 
+  default-src 'none'; 
+  script-src 'self' https://trusted.com; 
+  img-src 'self' data:; 
+  object-src 'none'; 
+  base-uri 'none';</code></pre>
+            <ul>
+                <li><strong>default-src 'none':</strong> Domyślnie blokuj wszystko (Deny All). Odblokuj tylko to, co niezbędne.</li>
+                <li><strong>object-src 'none':</strong> Blokuje stare wtyczki (Flash/Java). Zawsze to ustawiaj.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>JAK ŻYĆ BEZ 'UNSAFE-INLINE'? (NONCE)</h3>
+            <p>Programiści narzekają: <em>"Muszę użyć `unsafe-inline`, bo mam kod JS wewnątrz HTML (`&lt;script&gt;var x=1&lt;/script&gt;`)"</em>.</p>
+            <p><strong>Rozwiązanie (Nonce):</strong></p>
+            <ol>
+                <li>Serwer generuje losowy ciąg (nonce) przy każdym odświeżeniu: <code>nonce="R4nd0m"</code>.</li>
+                <li>Dodaje go do nagłówka: <code>script-src 'nonce-R4nd0m'</code>.</li>
+                <li>Dodaje go do tagu: <code>&lt;script nonce="R4nd0m"&gt;...&lt;/script&gt;</code>.</li>
+            </ol>
+            <p>Haker nie zna nonce'a, więc jego wstrzyknięty skrypt zostanie zablokowany!</p>
+        </div>
+    </section>
+
+    <!-- 3. HSTS & HTTPS -->
+    <section>
+        <h2>> HSTS PRELOAD</h2>
+        <p>Samo przekierowanie 301 z HTTP na HTTPS to za mało (podatne na SSL Stripping przy pierwszym wejściu).</p>
+
+        <div class="card">
+            <h3>HSTS NA STERYDACH</h3>
+            <p>Prawidłowy nagłówek produkcyjny:</p>
+            <pre><code>Strict-Transport-Security: max-age=63072000; includeSubDomains; preload</code></pre>
+            <ul>
+                <li><strong>max-age:</strong> Min. 1 rok (w sekundach).</li>
+                <li><strong>includeSubDomains:</strong> Chroni też <code>dev.firma.pl</code>.</li>
+                <li><strong>preload:</strong> Magiczne słowo. Pozwala wpisać domenę na <a href="https://hstspreload.org/" style="color:var(--accent)">listę hstspreload.org</a>.</li>
+            </ul>
+            <p><span class="secure-tag">EFEKT</span> Twoja domena jest "wbudowana" w Chrome/Firefoxa jako "Tylko HTTPS". Przeglądarka nigdy nie wyśle do niej pakietu bez szyfrowania.</p>
+        </div>
+    </section>
+
+    <!-- 4. NOWOCZESNE NAGŁÓWKI -->
+    <section>
+        <h2>> INNE TARCZE (HARDENING)</h2>
+        <div class="card">
+            <table>
+                <tr>
+                    <th>Nagłówek</th>
+                    <th>Co robi?</th>
+                </tr>
+                <tr>
+                    <td><code>Permissions-Policy</code></td>
+                    <td>Blokuje dostęp strony do kamery, mikrofonu, USB, geolokalizacji. <br><em>Np. `camera=()` (kamera wyłączona).</em></td>
+                </tr>
+                <tr>
+                    <td><code>Referrer-Policy</code></td>
+                    <td><code>strict-origin-when-cross-origin</code>. Chroni przed wyciekiem tokenów w URL do zewnętrznych stron analitycznych.</td>
+                </tr>
+                <tr>
+                    <td><code>X-Content-Type-Options</code></td>
+                    <td><code>nosniff</code>. Zapobiega traktowaniu plików tekstowych/obrazków jako skryptów JS.</td>
+                </tr>
+            </table>
+        </div>
+    </section>
+
+    <!-- CHECKLIST -->
+    <section>
+        <h2>BLUE TEAM CHECKLIST 🛡️</h2>
+        <div class="card checklist-card">
+            <div class="checklist-item">
+                <span class="check-icon">🛡️</span>
+                <div><strong>CSP Evaluator:</strong> Zawsze wrzuć nagłówek CSP do narzędzia Google CSP Evaluator. Powie Ci, czy Twoja polityka jest dziurawa.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">🛡️</span>
+                <div><strong>Cookie Flags:</strong> Czy WSZYSTKIE ciastka mają `Secure`, `HttpOnly` i `SameSite=Strict/Lax`?</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">🛡️</span>
+                <div><strong>Usuwanie nagłówków:</strong> Usuń `Server: Apache` i `X-Powered-By: PHP`. Nie pomagaj atakującemu w rekonesansie.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>🎓 WERYFIKACJA WIEDZY OBRONNEJ</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | Moduł 25</p>
+    </footer>
+</div>
+
+<!-- DANE DO QUIZU -->
+<script>
+    const quizData = [
+        {
+            question: "Co oznacza zasada 'Defense in Depth' (Obrona w głąb)?",
+            options: [
+                "Ukrywanie serwerów głęboko pod ziemią.",
+                "Stosowanie wielu warstw zabezpieczeń (kod, nagłówki, sieć), tak aby przełamanie jednej nie oznaczało kompromitacji całego systemu.",
+                "Używanie bardzo długich haseł.",
+                "Obrona tylko przed atakami Deep Web."
+            ],
+            correct: 1,
+            explanation: "Nikt nie pisze kodu idealnego. Nagłówki (Warstwa 2) są po to, by ratować sytuację, gdy programista popełni błąd w kodzie (Warstwa 1)."
+        },
+        {
+            type: "scenario",
+            question: "Programista mówi: 'Nie mogę wdrożyć CSP, bo używam skryptów inline w HTML'. Jaką bezpieczną alternatywę dla 'unsafe-inline' mu zaproponujesz?",
+            options: [
+                "Rezygnację z CSP.",
+                "Użycie mechanizmu 'Nonce' (kryptograficznego, jednorazowego tokena) dodawanego do nagłówka CSP i tagów <script>.",
+                "Przeniesienie kodu do plików .txt.",
+                "Użycie 'unsafe-eval'."
+            ],
+            correct: 1,
+            explanation: "Nonce to jednorazowa przepustka. Serwer mówi: 'Ufam temu konkretnemu blokowi kodu, bo ma właściwy identyfikator'. Haker nie zna identyfikatora, więc jego kod nie zadziała."
+        },
+        {
+            question: "Co daje flaga 'preload' w nagłówku HSTS?",
+            options: [
+                "Szybsze ładowanie strony.",
+                "Umożliwia wpisanie domeny na sztywną listę w przeglądarkach (HSTS Preload List). Dzięki temu nawet PIERWSZE połączenie użytkownika z domeną jest wymuszane po HTTPS.",
+                "Wstępne ładowanie obrazków.",
+                "Blokadę portu 80."
+            ],
+            correct: 1,
+            explanation: "Bez preloadu, pierwsze połączenie (np. wpisanie 'bank.com' w pasek adresu) idzie po HTTP i jest podatne na atak SSL Strip. Preload eliminuje to ryzyko."
+        },
+        {
+            question: "Dlaczego nagłówek `X-Content-Type-Options: nosniff` jest ważny?",
+            options: [
+                "Zapobiega wąchaniu pakietów.",
+                "Zmusza przeglądarkę do ścisłego przestrzegania zadeklarowanego typu pliku (MIME type). Zapobiega to wykonaniu pliku `avatar.jpg` jako skryptu JS, jeśli serwer pomylił nagłówki.",
+                "Blokuje pobieranie plików.",
+                "Ukrywa rozszerzenia plików."
+            ],
+            correct: 1,
+            explanation: "Przeglądarki lubią 'zgadywać' typ pliku (MIME Sniffing). Jeśli w pliku tekstowym znajdą HTML, mogą go wykonać. `nosniff` mówi: 'Nie zgaduj, ufaj serwerowi'."
+        },
+        {
+            question: "Co robi dyrektywa `object-src 'none'` w CSP?",
+            options: [
+                "Blokuje obiekty JSON.",
+                "Blokuje ładowanie wtyczek takich jak Flash, Java Applets czy ActiveX. To dobra praktyka hardeningu, bo te technologie są przestarzałe i niebezpieczne.",
+                "Blokuje programowanie obiektowe.",
+                "Blokuje tag <img>."
+            ],
+            correct: 1,
+            explanation: "Nawet jeśli nie używasz Flasha, haker może spróbować go załadować, by wykorzystać luki w przeglądarce. Zablokowanie obiektów zamyka ten wektor ataku."
+        },
+        {
+            type: "scenario",
+            question: "Audytujesz stronę i widzisz nagłówek `Server: nginx/1.14.0 (Ubuntu)`. Jaką rekomendację wpiszesz do raportu (kategoria Hardening)?",
+            options: [
+                "Zaktualizować Ubuntu.",
+                "Skonfigurować serwer tak, aby ukrywał dokładną wersję oprogramowania (np. tylko `Server: nginx`). To utrudnia rekonesans (tzw. Server Banner Grabbing).",
+                "Zmienić serwer na Apache.",
+                "To nie jest błąd."
+            ],
+            correct: 1,
+            explanation: "Zasada minimalizacji informacji. Jeśli haker wie, że masz wersję 1.14.0, od razu sprawdzi w Google: 'nginx 1.14.0 exploits'. Nie ułatwiaj mu zadania."
+        },
+        {
+            question: "Jaki nagłówek pozwala kontrolować dostęp strony do kamery i mikrofonu użytkownika?",
+            options: [
+                "Content-Security-Policy",
+                "Permissions-Policy (dawniej Feature-Policy)",
+                "X-Frame-Options",
+                "Access-Control-Allow-Media"
+            ],
+            correct: 1,
+            explanation: "Ustawienie `Permissions-Policy: camera=(), microphone=()` gwarantuje, że nawet jeśli ktoś wstrzyknie złośliwy kod (XSS), nie będzie mógł podglądać użytkownika."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

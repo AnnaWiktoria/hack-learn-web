@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Egzamin: Moduł 1 - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: BOSS BATTLE (Gold & Red) */
+        :root {
+            --accent: #ff003c; /* Cyberpunk Red */
+            --accent-glow: rgba(255, 0, 60, 0.4);
+            --success: #ffd700; /* Gold za zdanie */
+        }
+        
+        body {
+            background-image: repeating-linear-gradient(
+                45deg,
+                #0a0a0a,
+                #0a0a0a 10px,
+                #111 10px,
+                #111 20px
+            );
+        }
+
+        .boss-header {
+            border: 2px solid var(--accent);
+            padding: 20px;
+            text-align: center;
+            background: rgba(255, 0, 60, 0.05);
+            margin-bottom: 40px;
+            box-shadow: 0 0 30px var(--accent-glow);
+        }
+
+        .boss-title {
+            font-size: 3rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 5px;
+            margin: 0;
+            text-shadow: 2px 2px 0px #000;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div class="boss-header">
+        <h1 class="boss-title">EGZAMIN KOŃCOWY</h1>
+        <p style="color: #fff; margin-top: 10px; font-family: var(--font-mono);">
+            /// POZIOM 1: FUNDAMENTY WEB SECURITY ///
+        </p>
+    </div>
+
+    <section>
+        <h2>> STATUS MISJI</h2>
+        <p>To jest test podsumowujący wiedzę z lekcji 1-10. Pytania są trudniejsze i wymagają łączenia faktów.</p>
+        <div class="card" style="border-color: var(--accent);">
+            <h3>ZASADY GRY</h3>
+            <ul>
+                <li><strong>Liczba pytań:</strong> 20</li>
+                <li><strong>Wymagany wynik:</strong> 80% (16/20)</li>
+                <li><strong>Zakres:</strong> HTTP, Cookies, Headers, SOP/CORS, Auth, JWT, SQLi, XSS, SSRF.</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>⚔️ ROZPOCZNIJ WALKĘ</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | EXAM 01</p>
+    </footer>
+</div>
+
+<!-- DANE DO EGZAMINU -->
+<script>
+    const quizData = [
+        // HTTP & METHODS
+        {
+            question: "Dlaczego użycie metody GET do usuwania danych (np. /delete?id=1) jest krytycznym błędem?",
+            options: [
+                "Ponieważ GET ma limit znaków.",
+                "Ponieważ GET jest logowany w historii przeglądarki i jest podatny na trywialny atak CSRF (np. przez tag <img>).",
+                "Ponieważ GET jest wolniejszy niż POST.",
+                "Ponieważ GET nie obsługuje szyfrowania HTTPS."
+            ],
+            correct: 1,
+            explanation: "Metody Safe (GET) nie mogą zmieniać stanu. Haker może wysłać ofierze link, który po kliknięciu wykona akcję bez jej wiedzy."
+        },
+        // STATUS CODES
+        {
+            question: "Podczas rekonesansu (Dirb/Feroxbuster) otrzymujesz status 403 Forbidden na katalogu /admin, ale status 404 Not Found na /admin/login. Jaki wniosek wyciągnie pentester?",
+            options: [
+                "Katalog /admin nie istnieje.",
+                "Katalog /admin istnieje (serwer blokuje dostęp), a plik login po prostu nie istnieje pod tą ścieżką. To tzw. Information Leakage.",
+                "Serwer jest wyłączony.",
+                "WAF zablokował Twoje IP."
+            ],
+            correct: 1,
+            explanation: "Różnica w kodach błędów (403 vs 404) pozwala mapować strukturę aplikacji nawet bez dostępu do plików."
+        },
+        // COOKIES
+        {
+            type: "scenario",
+            question: "Znalazłeś podatność XSS na stronie banku. Próbujesz wykraść `document.cookie`, ale zwraca pusty ciąg, mimo że jesteś zalogowany. Która flaga ciasteczka zadziałała?",
+            options: [
+                "Secure",
+                "SameSite=Strict",
+                "HttpOnly",
+                "Domain"
+            ],
+            correct: 2,
+            explanation: "HttpOnly blokuje dostęp do ciasteczek z poziomu API JavaScript. To kluczowa obrona przed Session Hijacking przez XSS."
+        },
+        // HEADERS
+        {
+            question: "Klient prosi o ochronę przed atakami Clickjacking. Jaki nagłówek rekomendujesz w raporcie?",
+            options: [
+                "Strict-Transport-Security (HSTS)",
+                "X-Frame-Options: DENY (lub CSP frame-ancestors)",
+                "Access-Control-Allow-Origin",
+                "X-XSS-Protection"
+            ],
+            correct: 1,
+            explanation: "Clickjacking polega na załadowaniu strony w niewidocznej ramce (iframe). Nagłówek X-Frame-Options blokuje taką możliwość."
+        },
+        // CORS
+        {
+            question: "W odpowiedzi serwera widzisz: `Access-Control-Allow-Origin: *` oraz `Access-Control-Allow-Credentials: true`. Jak ocenisz to znalezisko?",
+            options: [
+                "To bezpieczna konfiguracja dla publicznego API.",
+                "To błąd składni, przeglądarka to zignoruje.",
+                "To krytyczna konfiguracja. Nowoczesne przeglądarki zablokują to połączenie, ponieważ nie wolno używać wildcard (*) razem z Credentials.",
+                "To pozwala na atak SQL Injection."
+            ],
+            correct: 2,
+            explanation: "Specyfikacja CORS zabrania łączenia `*` z `true`. Jeśli deweloper chce pozwolić na Credentials, musi jawnie podać domenę (np. https://site.com)."
+        },
+        // AUTH (IDOR)
+        {
+            type: "scenario",
+            question: "Testujesz API: `GET /invoices/1005`. Zmieniasz ID na 1006 i widzisz fakturę innej firmy. Jakie to ryzyko (Severity) i nazwa błędu?",
+            options: [
+                "Low - Information Disclosure.",
+                "Medium - Session Fixation.",
+                "Critical/High - IDOR (Insecure Direct Object Reference) / BOLA.",
+                "Info - Works as intended."
+            ],
+            correct: 2,
+            explanation: "Dostęp do danych finansowych innych użytkowników to zazwyczaj Critical. Błąd polega na braku weryfikacji uprawnień do obiektu (Authorization)."
+        },
+        // JWT
+        {
+            question: "Dlaczego algorytm 'None' w nagłówku JWT jest niebezpieczny?",
+            options: [
+                "Bo zajmuje dużo miejsca.",
+                "Bo pozwala atakującemu usunąć podpis cyfrowy (Signature), zmienić dane w Payload (np. 'admin': true) i serwer to zaakceptuje.",
+                "Bo nie szyfruje danych.",
+                "Bo działa tylko w trybie offline."
+            ],
+            correct: 1,
+            explanation: "Algorytm 'None' sprawia, że token staje się niezabezpieczonym JSON-em. Każdy może wpisać tam dowolne uprawnienia."
+        },
+        // SQL INJECTION
+        {
+            type: "scenario",
+            question: "Wpisujesz w formularzu logowania: `admin' --`. Zostajesz zalogowany bez hasła. Dlaczego to zadziałało?",
+            options: [
+                "Znak `'` zamknął string w zapytaniu SQL, a `--` zakomentowało resztę zapytania (sprawdzanie hasła). Warunek WHERE stał się prawdziwy.",
+                "To błąd XSS w formularzu.",
+                "Serwer zresetował hasło admina.",
+                "Użyłeś domyślnego hasła."
+            ],
+            correct: 0,
+            explanation: "To klasyczne SQL Injection. Zapytanie zmieniło się w: `SELECT * FROM users WHERE user='admin' -- ' AND pass='...'`."
+        },
+        // XSS
+        {
+            question: "Czym różni się Stored XSS od Reflected XSS?",
+            options: [
+                "Stored XSS zapisuje się trwale na serwerze (np. w komentarzu) i atakuje każdego odwiedzającego. Reflected atakuje tylko osobę, która kliknie w link.",
+                "Reflected jest groźniejszy.",
+                "Stored dotyczy tylko baz SQL.",
+                "Nie ma różnicy."
+            ],
+            correct: 0,
+            explanation: "Stored (Persistence) XSS jest bombą z opóźnionym zapłonem. Haker zostawia payload, a ofiary same go pobierają, wchodząc na stronę."
+        },
+        // SSRF
+        {
+            question: "Podczas testu funkcji 'Importuj z URL' wpisujesz `http://169.254.169.254/latest/meta-data/`. Co próbujesz osiągnąć?",
+            options: [
+                "Próbuję wykonać atak DoS.",
+                "Próbuję odczytać metadane instancji chmurowej (AWS/GCP/Azure) i wykraść klucze dostępowe przez atak SSRF.",
+                "Próbuję połączyć się z localhostem.",
+                "Skanuję porty."
+            ],
+            correct: 1,
+            explanation: "Adres 169.254.169.254 to standardowy adres Metadata Service w chmurze. Dostęp do niego z zewnątrz powinien być zablokowany."
+        },
+        // AUTH (BAC)
+        {
+            question: "Co to jest 'Vertical Privilege Escalation'?",
+            options: [
+                "Dostęp do danych innego użytkownika na tym samym poziomie.",
+                "Uzyskanie dostępu do funkcji administratora przez zwykłego użytkownika (np. dostęp do /admin_panel).",
+                "Wgranie pliku na serwer.",
+                "Atak na bazę danych."
+            ],
+            correct: 1,
+            explanation: "Eskalacja pionowa (Vertical) to wspinanie się w górę drabiny uprawnień (User -> Admin)."
+        },
+        // SOP
+        {
+            question: "Czy `https://api.google.com` i `https://google.com` to ten sam Origin (Pochodzenie)?",
+            options: [
+                "Tak.",
+                "Nie, ponieważ różnią się subdomeną (api vs www/root).",
+                "Tak, bo firma ta sama.",
+                "Zależy od przeglądarki."
+            ],
+            correct: 1,
+            explanation: "Origin to: Protokół + Domena + Port. Subdomena jest częścią domeny, więc `api.google.com` != `google.com`. SOP je rozdziela."
+        },
+        // COOKIES
+        {
+            question: "Co robi flaga `SameSite=Strict`?",
+            options: [
+                "Szyfruje ciasteczko.",
+                "Blokuje wysłanie ciasteczka w każdym żądaniu Cross-Site (np. kliknięcie linku z maila nie zaloguje użytkownika). Chroni przed CSRF.",
+                "Pozwala na dostęp z każdej domeny.",
+                "Wymusza zmianę hasła."
+            ],
+            correct: 1,
+            explanation: "To najsilniejsza ochrona przed CSRF. Ciasteczka są wysyłane tylko w kontekście First-Party (gdy użytkownik już jest na stronie)."
+        },
+        // SSRF
+        {
+            question: "Jak można obejść filtr blokujący słowo 'localhost' lub '127.0.0.1' w ataku SSRF?",
+            options: [
+                "Nie da się.",
+                "Używając zapisu dziesiętnego (2130706433), ósemkowego, IPv6 ([::1]) lub domeny typu 'localtest.me'.",
+                "Używając VPN.",
+                "Wpisując 'google.com'."
+            ],
+            correct: 1,
+            explanation: "Czarne listy (Blacklists) są nieskuteczne. Istnieje wiele sposobów reprezentacji adresu IP localhosta."
+        },
+        // HEADERS (CSP)
+        {
+            question: "Co oznacza dyrektywa `script-src 'self' 'unsafe-inline'` w CSP?",
+            options: [
+                "Jest bardzo bezpieczna.",
+                "Pozwala na wykonywanie skryptów z własnej domeny ORAZ skryptów wpisanych bezpośrednio w HTML (<script>...), co czyni ochronę przed XSS nieskuteczną.",
+                "Blokuje wszystkie skrypty.",
+                "Wymusza HTTPS."
+            ],
+            correct: 1,
+            explanation: "`unsafe-inline` to dziura w CSP. Pozwala hakerowi wstrzyknąć własny kod JS, jeśli znajdzie punkt wejścia XSS."
+        },
+        // SQL INJECTION
+        {
+            question: "Jaka jest jedyna w 100% skuteczna metoda obrony przed SQL Injection?",
+            options: [
+                "WAF (Firewall).",
+                "Filtrowanie znaków ' i -.",
+                "Prepared Statements (Zapytania parametryzowane).",
+                "Ukrywanie błędów bazy."
+            ],
+            correct: 2,
+            explanation: "Prepared Statements oddzielają kod SQL od danych. Baza danych traktuje input użytkownika zawsze jako tekst, nigdy jako komendę."
+        },
+        // GENERAL MINDSET
+        {
+            question: "Co oznacza zasada 'Trust Boundary' (Granica Zaufania)?",
+            options: [
+                "Miejsce, gdzie kończy się kontrola użytkownika, a zaczyna system. Wszystkie dane przekraczające tę granicę (od klienta do serwera) muszą być traktowane jako niezaufane i walidowane.",
+                "Zasięg sieci Wi-Fi.",
+                "Lista zaufanych adresów IP.",
+                "Granica państwa."
+            ],
+            correct: 0,
+            explanation: "To fundament bezpieczeństwa. Nigdy nie ufaj temu, co przychodzi od klienta (przeglądarki), bo klient jest pod kontrolą użytkownika (i hakera)."
+        },
+        // XSS & CONTEXT
+        {
+            question: "Dlaczego samo filtrowanie `<script>` nie chroni przed XSS?",
+            options: [
+                "Bo hakerzy używają CSS.",
+                "Bo JS można wykonać w atrybutach zdarzeń (np. `<img onerror=alert(1)>`) lub w linkach (`javascript:`), bez użycia tagu script.",
+                "Bo XSS działa na serwerze.",
+                "Chroni w 100%."
+            ],
+            correct: 1,
+            explanation: "XSS to nie tylko tag script. Istnieją dziesiątki wektorów ataku (Event Handlers, SVG, Object, itp.)."
+        },
+        // JWT
+        {
+            question: "Czy odkodowanie Base64 z Payloadu JWT wymaga klucza/sekretu?",
+            options: [
+                "Tak, tylko serwer może to zrobić.",
+                "Nie, Base64 to kodowanie, a nie szyfrowanie. Każdy może odczytać treść Payloadu.",
+                "Tak, jeśli użyto HTTPS.",
+                "Zależy od długości tokena."
+            ],
+            correct: 1,
+            explanation: "Base64 jest odwracalne dla każdego. Dlatego w tokenach JWT nigdy nie wolno przesyłać haseł ani danych wrażliwych."
+        },
+        // LFI (Path Traversal)
+        {
+            question: "Jaki znak/ciąg pozwala na wyjście katalogu wyżej w ataku Path Traversal?",
+            options: [
+                "../ (kropka kropka slash)",
+                "-- (minus minus)",
+                "// (slash slash)",
+                "?? (pytajnik pytajnik)"
+            ],
+            correct: 0,
+            explanation: "Ciąg `../` to polecenie dla systemu plików: 'przejdź do katalogu nadrzędnego'. Używając go wielokrotnie, można dojść do roota (SYSTEM)."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 04: Nagłówki Bezpieczeństwa - Kurs Pentestera</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent dla tej lekcji: Neon Lime (Defense/Shields) */
+        :root {
+            --accent: #76ff03;
+            --accent-glow: rgba(118, 255, 3, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>SECURITY HEADERS</h1>
+            <p>MODUŁ 04: Tarcze przeglądarki, CSP, HSTS i Ochrona przed Clickjackingiem</p>
+        </header>
+
+        <!-- 1. WPROWADZENIE -->
+        <section>
+            <h2>> PIERWSZA LINIA OBRONY</h2>
+            <p>Nagłówki bezpieczeństwa to instrukcje, które serwer wysyła do przeglądarki, mówiąc jej: "Hej, zachowuj
+                się bezpiecznie!". Pentester sprawdza je automatycznie, bo ich brak ułatwia ataki XSS, Clickjacking czy
+                MiTM.</p>
+
+            <div class="card">
+                <h3>ŚWIĘTA TRÓJCA OBRONY</h3>
+                <p>Jeśli w raporcie z audytu brakuje tych trzech, klient ma problem:</p>
+                <ol>
+                    <li style="margin-bottom:10px;"><strong style="color:var(--accent)">Content-Security-Policy
+                            (CSP)</strong> – Szef wszystkich nagłówków. Blokuje nieautoryzowane skrypty (XSS).</li>
+                    <li style="margin-bottom:10px;"><strong style="color:var(--accent)">Strict-Transport-Security
+                            (HSTS)</strong> – Wymusza szyfrowanie. Blokuje ataki downgrade (HTTP).</li>
+                    <li><strong style="color:var(--accent)">X-Frame-Options (XFO)</strong> – Blokuje ładowanie strony w
+                        ramkach (Clickjacking).</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- 2. SZCZEGÓŁY TECHNICZNE -->
+        <section>
+            <h2>> ANALIZA NAGŁÓWKÓW</h2>
+
+            <!-- CSP -->
+            <div class="card">
+                <h3>1. CSP (Content Security Policy)</h3>
+                <p>Definiuje "białą listę" źródeł, z których przeglądarka może pobierać obrazki, skrypty czy style.</p>
+                <pre><code>Content-Security-Policy: default-src 'self'; script-src 'self' https://trusted.com</code></pre>
+                <p><strong>Co to oznacza?</strong> "Uruchamiaj skrypty tylko z mojego serwera ('self') oraz z
+                    trusted.com. Resztę blokuj."</p>
+                <p><span class="status-badge s-5xx">RED FLAG:</span> <code>unsafe-inline</code> lub
+                    <code>unsafe-eval</code>. Te opcje wyłączają ochronę przed XSS!</p>
+            </div>
+
+            <!-- HSTS -->
+            <div class="card">
+                <h3>2. HSTS (Strict-Transport-Security)</h3>
+                <p>Mówi przeglądarce: "Przez następny rok w ogóle nie próbuj łączyć się ze mną przez nieszyfrowane
+                    HTTP".</p>
+                <pre><code>Strict-Transport-Security: max-age=31536000; includeSubDomains; preload</code></pre>
+                <p>To zabija ataki typu <strong>SSL Stripping</strong> (np. narzędziem sslstrip w sieci Wi-Fi), gdzie
+                    atakujący próbuje zmusić ofiarę do użycia czystego HTTP.</p>
+            </div>
+
+            <!-- INNE WAŻNE -->
+            <div class="card">
+                <h3>3. POZOSTAŁE TARCZE</h3>
+                <table>
+                    <tr>
+                        <th>Nagłówek</th>
+                        <th>Przeciwdziała</th>
+                    </tr>
+                    <tr>
+                        <td><code>X-Frame-Options: DENY</code></td>
+                        <td><strong>Clickjacking.</strong> Strona nie może być wyświetlona wewnątrz
+                            <code>&lt;iframe&gt;</code> na innej stronie.</td>
+                    </tr>
+                    <tr>
+                        <td><code>X-Content-Type-Options: nosniff</code></td>
+                        <td><strong>MIME Sniffing.</strong> Zmusza przeglądarkę do trzymania się zadeklarowanego typu
+                            pliku (nie wykona pliku .jpg jako skryptu JS).</td>
+                    </tr>
+                    <tr>
+                        <td><code>Referrer-Policy: no-referrer</code></td>
+                        <td><strong>Wyciek danych.</strong> Nie wysyła adresu URL (który może zawierać tokeny) do stron,
+                            na które przechodzi użytkownik.</td>
+                    </tr>
+                </table>
+            </div>
+        </section>
+
+        <!-- 3. PERSPEKTYWA PENTESTERA -->
+        <section>
+            <h2>> PERSPEKTYWA PENTESTERA</h2>
+            <p>Brak nagłówków to zazwyczaj podatność klasy <strong>Low</strong> lub <strong>Informational</strong>,
+                chyba że uda się stworzyć działający exploit (np. Clickjacking na zmianę hasła).</p>
+
+            <div class="card">
+                <h3>SCENARIUSZ: BYPASSING CSP</h3>
+                <p>Widzisz nagłówek:</p>
+                <pre><code>Content-Security-Policy: script-src 'self' 'unsafe-inline'</code></pre>
+                <p>Programista myślał, że jest bezpieczny, bo dodał CSP. Ale <code>'unsafe-inline'</code> pozwala na
+                    wykonanie: <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>.</p>
+                <p><strong>Wniosek:</strong> Obecność nagłówka nie oznacza bezpieczeństwa. Musisz sprawdzić jego
+                    konfigurację (np. narzędziem Google CSP Evaluator).</p>
+            </div>
+
+            <div class="card">
+                <h3>SCENARIUSZ: CLICKJACKING</h3>
+                <p>Brak nagłówka <code>X-Frame-Options</code> na stronie "Usuń konto".</p>
+                <p><strong>Atak:</strong> Tworzysz stronę-pułapkę z niewidoczną ramką (iframe) zawierającą stronę
+                    ofiary. Przycisk "Wygraj iPhone" umieszczasz idealnie nad przyciskiem "Usuń konto". Ofiara klika w
+                    iPhone, a klika w usunięcie konta.</p>
+            </div>
+        </section>
+
+        <!-- CHECKLIST -->
+        <section>
+            <h2>CHECKLISTA / RED FLAGS</h2>
+            <div class="card checklist-card">
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>CSP z 'unsafe-inline':</strong> To tak, jakby zamknąć drzwi na klucz, ale zostawić
+                        klucz w zamku. XSS nadal możliwy.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Brak HSTS:</strong> Użytkownik wpisujący ręcznie "http://bank.com" jest narażony na
+                        atak Man-in-the-Middle przy pierwszym połączeniu.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Stare nagłówki:</strong> `X-XSS-Protection` jest przestarzały (deprecated) i nowoczesne
+                        przeglądarki go ignorują. Nie traktuj go jako zabezpieczenia.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Server Version Disclosure:</strong> Nagłówek `Server: Apache/2.4.41 (Ubuntu)` zdradza
+                        wersję oprogramowania. To informacja dla atakującego o potencjalnych CVE.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QUIZ -->
+        <section id="quiz-section">
+            <h2>🎓 WERYFIKACJA WIEDZY</h2>
+            <div id="quiz-container"></div>
+        </section>
+
+        <footer>
+            <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Kurs Pentestera | Moduł 04</p>
+        </footer>
+    </div>
+
+    <!-- DANE DO QUIZU -->
+    <script>
+        const quizData = [
+            {
+                question: "Który nagłówek jest uważany za najskuteczniejszą ochronę przed atakami XSS (Cross-Site Scripting)?",
+                options: [
+                    "X-XSS-Protection",
+                    "Strict-Transport-Security",
+                    "Content-Security-Policy (CSP)",
+                    "Access-Control-Allow-Origin"
+                ],
+                correct: 2,
+                explanation: "CSP pozwala precyzyjnie określić, skąd przeglądarka może ładować skrypty. X-XSS-Protection jest przestarzały."
+            },
+            {
+                type: "scenario",
+                question: "Analizujesz nagłówek CSP: \"script-src 'self' 'unsafe-inline'\". Co raportujesz klientowi?",
+                options: [
+                    "Konfiguracja jest poprawna i bezpieczna.",
+                    "Użycie 'unsafe-inline' niweluje ochronę przed XSS, ponieważ pozwala na wykonywanie skryptów wstrzykniętych bezpośrednio w HTML.",
+                    "Należy dodać 'unsafe-eval' dla zwiększenia bezpieczeństwa.",
+                    "Brakuje dyrektywy img-src."
+                ],
+                correct: 1,
+                explanation: "'unsafe-inline' to najczęstszy błąd konfiguracji CSP. Pozwala on na wykonanie payloadów typu <script>alert(1)< /script>, przed którymi CSP ma chronić."
+            },
+            {
+                question: "Przed jakim atakiem chroni nagłówek X-Frame-Options (oraz CSP frame-ancestors)?",
+                options: [
+                    "SQL Injection",
+                    "Clickjacking (UI Redressing)",
+                    "Session Hijacking",
+                    "Buffer Overflow"
+                ],
+                correct: 1,
+                explanation: "Blokuje on możliwość załadowania Twojej strony wewnątrz ramki (iframe) na innej, złośliwej stronie."
+            },
+            {
+                question: "Co robi nagłówek HSTS (Strict-Transport-Security)?",
+                options: [
+                    "Szyfruje bazę danych.",
+                    "Wymusza na przeglądarce łączenie się z serwerem wyłącznie przez HTTPS przez określony czas, chroniąc przed SSL Stripping.",
+                    "Sprawdza siłę hasła użytkownika.",
+                    "Ukrywa wersję serwera Apache."
+                ],
+                correct: 1,
+                explanation: "HSTS zapobiega atakom 'downgrade', gdzie atakujący próbuje zmusić ofiarę do korzystania z nieszyfrowanej wersji strony."
+            },
+            {
+                question: "Nagłówek 'X-Content-Type-Options: nosniff' zapobiega:",
+                options: [
+                    "Wąchaniu pakietów sieciowych.",
+                    "MIME Sniffingowi - sytuacji, gdzie przeglądarka zgaduje typ pliku (np. traktuje plik .jpg z kodem HTML jako skrypt wykonywalny).",
+                    "Wysyłaniu formularzy bez tokena CSRF.",
+                    "Indeksowaniu strony przez Google."
+                ],
+                correct: 1,
+                explanation: "Bez 'nosniff' przeglądarki mogą zignorować zadeklarowany Content-Type i wykonać złośliwy kod ukryty w pliku graficznym lub tekstowym."
+            },
+            {
+                type: "scenario",
+                question: "W raporcie widzisz informację o brakującym nagłówku 'Referrer-Policy'. Jakie jest ryzyko?",
+                options: [
+                    "Krytyczne - atakujący może przejąć serwer.",
+                    "Wyciek informacji - pełny URL (mogący zawierać tokeny w parametrach GET) jest wysyłany do zewnętrznych stron, na które klika użytkownik.",
+                    "Brak ryzyka, to tylko informacja debugowania.",
+                    "Strona będzie ładować się wolniej."
+                ],
+                correct: 1,
+                explanation: "Jeśli jesteś na `bank.com/reset?token=123` i klikniesz link do `evil.com`, bez odpowiedniej polityki Referer, `evil.com` w swoich logach zobaczy Twój token."
+            },
+            {
+                question: "Dlaczego nagłówek 'Server: Apache/2.4.41' jest uznawany za (mały) problem bezpieczeństwa?",
+                options: [
+                    "Bo Apache to wolny serwer.",
+                    "To ujawnienie informacji (Information Disclosure). Atakujący znając dokładną wersję, może sprawdzić w bazie CVE, czy ma ona znane luki.",
+                    "Bo zajmuje zbyt dużo transferu.",
+                    "Bo RODO tego zabrania."
+                ],
+                correct: 1,
+                explanation: "W security wyznajemy zasadę minimalizacji informacji. Nie pomagaj atakującemu, mówiąc mu dokładnie, jaki soft atakuje."
+            },
+            {
+                question: "Co oznacza dyrektywa 'default-src' w CSP?",
+                options: [
+                    "Domyślne źródło skryptów, jeśli nie podano innej dyrektywy.",
+                    "Domyślny font strony.",
+                    "Fallback dla wszystkich typów zasobów (skrypty, style, obrazki), które nie mają zdefiniowanych własnych reguł.",
+                    "Lista zablokowanych adresów IP."
+                ],
+                correct: 2,
+                explanation: "Jeśli ustawisz `default-src 'self'` i nie zdefiniujesz `img-src`, to obrazki też będą ładowane tylko z 'self'."
+            },
+            {
+                type: "scenario",
+                question: "Chcesz zabezpieczyć stronę przed Clickjackingiem, ale musisz pozwolić na ładowanie jej w ramce na 'partner.com'. Jakiego nagłówka użyjesz?",
+                options: [
+                    "X-Frame-Options: DENY",
+                    "Content-Security-Policy: frame-ancestors 'self' https://partner.com",
+                    "Access-Control-Allow-Origin: *",
+                    "Strict-Transport-Security: includeSubDomains"
+                ],
+                correct: 1,
+                explanation: "X-Frame-Options jest mało elastyczny (DENY lub SAMEORIGIN). CSP z dyrektywą `frame-ancestors` pozwala precyzyjnie określić domeny, które mogą ramkować Twoją stronę."
+            },
+            {
+                question: "Co oznacza flaga 'preload' w nagłówku HSTS?",
+                options: [
+                    "Wstępne ładowanie obrazków dla szybkości.",
+                    "Prośbę o wpisanie domeny na listę 'HSTS Preload List' zaszytą w przeglądarkach (Chrome, Firefox). Dzięki temu nawet PIERWSZE połączenie jest szyfrowane.",
+                    "Ładowanie skryptów przed renderowaniem HTML.",
+                    "Blokadę reklam."
+                ],
+                correct: 1,
+                explanation: "Preload to najwyższy poziom HSTS. Domena jest 'hardkodowana' w kodzie źródłowym przeglądarki jako wymagająca HTTPS. Atak SSL Strip jest niemożliwy nawet przy pierwszym wejściu."
+            }
+        ];
+    </script>
+
+    <script src="quiz.js"></script>
+
+</body>
+
+</html>

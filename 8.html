@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 08: SQL Injection - Kurs Pentestera</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Toxic Green (Code Injection / Matrix) */
+        :root {
+            --accent: #39ff14;
+            --accent-glow: rgba(57, 255, 20, 0.3);
+        }
+
+        .sql-keyword {
+            color: #ff0055;
+            font-weight: bold;
+        }
+
+        /* Słowa kluczowe SQL */
+        .sql-string {
+            color: #ffd600;
+        }
+
+        /* Tekst w SQL */
+        .sql-input {
+            color: #39ff14;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        /* Wstrzyknięty kod */
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>SQL INJECTION</h1>
+            <p>MODUŁ 08: ' OR 1=1 -- // Przejmowanie bazy danych</p>
+        </header>
+
+        <!-- 1. MECHANIZM -->
+        <section>
+            <h2>> JAK TO DZIAŁA?</h2>
+            <p>SQL Injection (SQLi) występuje, gdy aplikacja bierze dane od użytkownika i <strong>skleja je</strong> z
+                zapytaniem do bazy danych, zamiast je odseparować.</p>
+
+            <div class="card">
+                <h3>ANATOMIA ATAKU</h3>
+                <p>Wyobraź sobie kod logowania w PHP (zły kod):</p>
+                <pre><code>$sql = "SELECT * FROM users WHERE name = '" . <span class="highlight">$user</span> . "'";</code></pre>
+
+                <p>Jeśli wpiszesz <code>admin</code>, zapytanie wygląda tak:</p>
+                <pre><code>SELECT * FROM users WHERE name = '<span class="sql-string">admin</span>'</code></pre>
+
+                <p>Ale jeśli wpiszesz <code>admin' OR '1'='1</code>, zapytanie zmienia się w:</p>
+                <pre><code>SELECT * FROM users WHERE name = '<span class="sql-string">admin</span><span class="sql-input">' OR '1'='1</span>'</code></pre>
+
+                <p><strong>Efekt:</strong> Baza danych sprawdza: "Czy nazwa to admin? NIE. Czy 1 równa się 1? TAK."
+                    <br>Warunek jest spełniony dla każdego rekordu. Jesteś zalogowany.</p>
+            </div>
+        </section>
+
+        <!-- 2. TYPY SQLi -->
+        <section>
+            <h2>> TYPY SQL INJECTION</h2>
+            <p>Nie zawsze jest tak łatwo. Czasem nie widzisz błędów.</p>
+
+            <div class="card">
+                <h3>1. IN-BAND (CLASSIC)</h3>
+                <p>Widzisz wyniki ataku bezpośrednio na stronie.</p>
+                <ul>
+                    <li><strong>Error-Based:</strong> Strona wyświetla błąd bazy danych (np. "SQL Syntax Error"), który
+                        zdradza strukturę bazy.</li>
+                    <li><strong>UNION-Based:</strong> Używasz operatora <code>UNION SELECT</code>, aby dokleić wyniki z
+                        innej tabeli do wyników widocznych na stronie (np. wyświetlasz hasła w miejscu tytułów
+                        artykułów).</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>2. BLIND (ŚLEPE)</h3>
+                <p>Strona nie pokazuje błędów ani danych, ale reaguje inaczej na prawdę i fałsz.</p>
+                <ul>
+                    <li><strong>Boolean-Based:</strong> Pytasz bazy: <em>"Czy hasło zaczyna się na 'A'?"</em>
+                        (<code>AND substring(pass,1,1)='A'</code>). Jeśli strona ładuje się normalnie -> TAK. Jeśli
+                        brakuje elementu -> NIE.</li>
+                    <li><strong>Time-Based:</strong> Pytasz: <em>"Jeśli jestem adminem, poczekaj 10 sekund"</em>
+                        (<code>WAITFOR DELAY '0:0:10'</code>). Jeśli strona mieli 10 sekund -> Jesteś adminem.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 3. NARZĘDZIA I OBRONA -->
+        <section>
+            <h2>> NARZĘDZIA I OBRONA</h2>
+
+            <div class="card">
+                <h3>SQLMAP - AUTOMATYZACJA</h3>
+                <p>To potężne narzędzie w terminalu. Wykrywa i eksploatuje większość błędów SQLi.</p>
+                <pre><code>sqlmap -u "http://target.com/page?id=5" --dbs</code></pre>
+                <p><span class="comment">// Komenda powyżej spróbuje wyciągnąć listę baz danych.</span></p>
+            </div>
+
+            <div class="card" style="border-color: var(--success);">
+                <h3>JEDYNA SKUTECZNA OBRONA</h3>
+                <p>Nie "filtrowanie znaków". Nie "Firewalle".</p>
+                <p>Jedynym lekiem są <strong>Prepared Statements (Parametryzowane Zapytania)</strong>.</p>
+                <pre><code><span class="comment">// Bezpieczny kod:</span>
+$stmt = $pdo->prepare('SELECT * FROM users WHERE name = :name');
+$stmt->execute(['name' => $userInput]);</code></pre>
+                <p>W tym przypadku baza danych traktuje wejście <strong>zawsze jako tekst</strong>, a nie kod
+                    wykonywalny. Nawet <code>' OR 1=1</code> zostanie potraktowane jako dziwne imię użytkownika.</p>
+            </div>
+        </section>
+
+        <!-- CHECKLIST -->
+        <section>
+            <h2>CHECKLISTA / RED FLAGS</h2>
+            <div class="card checklist-card">
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Błąd 500 po wpisaniu apostrofu ( ' ):</strong> Najsilniejszy sygnał, że zapytanie SQL
+                        się "rozjechało".</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Parametry ID w URL:</strong> `product.php?id=10`. Zmień na `10-1`. Jeśli wyświetli
+                        produkt 9 -> Baza wykonuje matematykę -> SQLi możliwe.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Formularze wyszukiwania i logowania:</strong> To najczęstsze punkty wejścia.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QUIZ -->
+        <section id="quiz-section">
+            <h2>🎓 WERYFIKACJA WIEDZY</h2>
+            <div id="quiz-container"></div>
+        </section>
+
+        <footer>
+            <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Kurs Pentestera | Moduł 08</p>
+        </footer>
+    </div>
+
+    <!-- DANE DO QUIZU -->
+    <script>
+        const quizData = [
+            {
+                question: "Co to jest SQL Injection?",
+                options: [
+                    "Błąd polegający na wstrzyknięciu złośliwego kodu JavaScript do przeglądarki.",
+                    "Błąd polegający na manipulacji zapytaniem do bazy danych poprzez nieodpowiednio przefiltrowane dane wejściowe.",
+                    "Atak polegający na zgadywaniu haseł.",
+                    "Przeciążenie bazy danych dużą liczbą zapytań."
+                ],
+                correct: 1,
+                explanation: "SQLi dzieje się, gdy aplikacja nie odróżnia kodu SQL od danych użytkownika, pozwalając atakującemu zmienić logikę zapytania."
+            },
+            {
+                question: "Który znak jest najczęściej używany do testowania (wywoływania błędu) w SQL Injection?",
+                options: [
+                    "Znak zapytania (?)",
+                    "Pojedynczy apostrof (')",
+                    "Wykrzyknik (!)",
+                    "Kropka (.)"
+                ],
+                correct: 1,
+                explanation: "Pojedynczy apostrof (') służy w SQL do zamykania ciągów tekstowych. Wpisanie go często 'psuje' składnię zapytania, co powoduje błąd serwera."
+            },
+            {
+                type: "scenario",
+                question: "Widzisz panel logowania. Wpisujesz w pole login: admin' OR '1'='1 -- . Co próbujesz osiągnąć?",
+                options: [
+                    "Chcesz usunąć bazę danych.",
+                    "Chcesz obejść uwierzytelnianie (Authentication Bypass) poprzez sprawienie, że warunek WHERE będzie zawsze prawdziwy.",
+                    "Chcesz wywołać błąd XSS.",
+                    "Chcesz zaszyfrować hasło."
+                ],
+                correct: 1,
+                explanation: "Ponieważ 1=1 jest zawsze prawdą, a operator OR sprawia, że wystarczy jeden prawdziwy warunek, baza zwraca pierwszy rekord (zazwyczaj admina) i loguje Cię."
+            },
+            {
+                question: "Na czym polega 'Blind SQL Injection'?",
+                options: [
+                    "Atakujący ma zawiązane oczy.",
+                    "Aplikacja nie zwraca żadnych danych ani błędów z bazy, ale zachowuje się inaczej w zależności od tego, czy zapytanie jest prawdziwe, czy fałszywe.",
+                    "Atak działa tylko w nocy.",
+                    "Baza danych jest ukryta za firewallem."
+                ],
+                correct: 1,
+                explanation: "W 'ślepym' ataku bawisz się w 'ciepło-zimno'. Zadajesz pytania Tak/Nie (np. czy hasło zaczyna się na 'A'?) i obserwujesz reakcję aplikacji (czas ładowania, długość treści)."
+            },
+            {
+                question: "Jaki jest najskuteczniejszy sposób obrony przed SQL Injection?",
+                options: [
+                    "Filtrowanie słów 'SELECT' i 'UNION'.",
+                    "Używanie Prepared Statements (zapytań parametryzowanych).",
+                    "Szyfrowanie bazy danych.",
+                    "Ukrywanie błędów serwera."
+                ],
+                correct: 1,
+                explanation: "Prepared Statements oddzielają strukturę zapytania od danych. Baza wie, że to, co wpisał użytkownik, to TYLKO tekst, a nie komenda SQL."
+            },
+            {
+                type: "scenario",
+                question: "Testujesz URL: sklep.php?id=10. Zmieniasz go na sklep.php?id=10-1. Strona wyświetla produkt o ID 9. Co to oznacza?",
+                options: [
+                    "Aplikacja wykonuje operacje matematyczne wewnątrz zapytania SQL. To silny wskaźnik podatności na SQL Injection.",
+                    "To normalne zachowanie PHP.",
+                    "Aplikacja ma błąd XSS.",
+                    "Serwer jest przeciążony."
+                ],
+                correct: 0,
+                explanation: "Jeśli `10-1` działa jak `9`, to znaczy, że Twój input trafił bezpośrednio do silnika bazy danych (który wykonał odejmowanie). Masz punkt zaczepienia!"
+            },
+            {
+                question: "Co robi operator UNION w ataku SQL Injection?",
+                options: [
+                    "Łączy atakującego z serwerem.",
+                    "Pozwala połączyć wyniki oryginalnego zapytania z wynikami zapytania wstrzykniętego przez atakującego (np. wypisać loginy i hasła na ekranie).",
+                    "Tworzy nową tabelę.",
+                    "Usuwa duplikaty."
+                ],
+                correct: 1,
+                explanation: "UNION to potężne narzędzie. Jeśli strona wyświetla listę produktów, możesz użyć UNION, aby na tej samej liście wyświetlić zawartość tabeli 'users'."
+            },
+            {
+                question: "Co oznacza podwójny myślnik (--) w SQL?",
+                options: [
+                    "Operator odejmowania.",
+                    "Znak komentarza. Wszystko po nim jest ignorowane przez bazę danych.",
+                    "Koniec linii.",
+                    "Błąd składni."
+                ],
+                correct: 1,
+                explanation: "Hakerzy używają `--` (lub `#` w MySQL), aby 'uciąć' resztę oryginalnego zapytania (np. sprawdzanie hasła), które mogłoby spowodować błąd składni."
+            },
+            {
+                type: "scenario",
+                question: "Używasz narzędzia sqlmap i widzisz komunikat: 'GET parameter 'id' seems to be 'AND boolean-based blind'. Co to znaczy?",
+                options: [
+                    "Parametr jest bezpieczny.",
+                    "Narzędzie wykryło, że może zadawać pytania Prawda/Fałsz i na tej podstawie wyciągać dane, mimo braku widocznych błędów.",
+                    "Musisz użyć przeglądarki.",
+                    "Baza danych jest wyłączona."
+                ],
+                correct: 1,
+                explanation: "Sqlmap automatyzuje żmudny proces Blind SQLi, zadając tysiące pytań logicznych do serwera, aby literka po literce odczytać nazwę bazy i tabele."
+            },
+            {
+                question: "Dlaczego samo 'ukrywanie błędów' (wyłączenie verbose errors) nie chroni przed SQL Injection?",
+                options: [
+                    "Bo hakerzy mają specjalne okulary.",
+                    "Bo nadal możliwe są ataki typu Blind SQL Injection (Time-based lub Boolean-based), które nie wymagają widocznych komunikatów błędów.",
+                    "Bo błędy i tak są w logach.",
+                    "Chroni, to wystarczające zabezpieczenie."
+                ],
+                correct: 1,
+                explanation: "Ukrycie błędów utrudnia sprawę (zmienia Classic SQLi w Blind SQLi), ale nie usuwa podatności. Dziura nadal tam jest, tylko trudniej ją zauważyć."
+            }
+        ];
+    </script>
+
+    <script src="quiz.js"></script>
+
+</body>
+
+</html>

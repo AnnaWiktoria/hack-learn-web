@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 07: JWT - Kurs Pentestera</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Cyber Gold (Tokens/Keys) */
+        :root {
+            --accent: #ffd600;
+            --accent-glow: rgba(255, 214, 0, 0.3);
+        }
+
+        /* Kolory do wizualizacji JWT */
+        .jwt-header {
+            color: #fb015b;
+        }
+
+        /* Czerwony */
+        .jwt-payload {
+            color: #d63aff;
+        }
+
+        /* Fioletowy */
+        .jwt-sig {
+            color: #00b9f1;
+        }
+
+        /* Niebieski */
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>JSON WEB TOKENS</h1>
+            <p>MODUŁ 07: Anatomia tokena, Algorytm 'None' i Łamanie podpisów</p>
+        </header>
+
+        <!-- 1. ANATOMIA -->
+        <section>
+            <h2>> ANATOMIA JWT</h2>
+            <p>JWT to nie jest "losowy ciąg znaków". To ustrukturyzowany format danych (JSON), zakodowany w Base64Url i
+                podpisany cyfrowo.</p>
+
+            <div class="card">
+                <h3>STRUKTURA: AAAAA.BBBBB.CCCCC</h3>
+                <p>Token składa się z 3 części rozdzielonych kropkami:</p>
+                <div
+                    style="background:#111; padding:15px; border-radius:5px; font-family:monospace; word-break:break-all; font-size:1.1rem;">
+                    <span class="jwt-header">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9</span>.<span
+                        class="jwt-payload">eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ</span>.<span
+                        class="jwt-sig">SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</span>
+                </div>
+                <ul>
+                    <li><strong class="jwt-header">1. HEADER (Czerwony):</strong> Metadane. Mówi "Jestem JWT i używam
+                        algorytmu HS256".</li>
+                    <li><strong class="jwt-payload">2. PAYLOAD (Fioletowy):</strong> Dane użytkownika (Claims). Tu jest
+                        ID, rola, data ważności.</li>
+                    <li><strong class="jwt-sig">3. SIGNATURE (Niebieski):</strong> Podpis cyfrowy. Gwarantuje, że nikt
+                        nie zmienił Payloadu.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>BASE64 != SZYFROWANIE</h3>
+                <p>To najważniejsza rzecz do zapamiętania. <strong>Każdy może odczytać treść JWT.</strong> Wystarczy
+                    wrzucić go do <code>jwt.io</code> lub użyć <code>base64 -d</code>.</p>
+                <p><span class="highlight">Wniosek:</span> Nigdy nie trzymaj haseł ani danych wrażliwych w Payloadzie!
+                </p>
+            </div>
+        </section>
+
+        <!-- 2. JAK TO DZIAŁA -->
+        <section>
+            <h2>> MECHANIZM PODPISU</h2>
+            <p>Skoro każdy może edytować Base64, dlaczego nie mogę zmienić sobie <code>"admin": false</code> na
+                <code>true</code>?</p>
+            <p>Bo serwer sprawdza <strong>PODPIS (Signature)</strong>.</p>
+            <pre><code>Signature = HMACSHA256(
+  base64(Header) + "." + base64(Payload),
+  SECRET_KEY
+)</code></pre>
+            <p>Jeśli zmienisz choć jeden znak w Payloadzie, podpis przestanie pasować (bo nie znasz
+                <code>SECRET_KEY</code>, żeby wygenerować nowy). Serwer odrzuci taki token.</p>
+        </section>
+
+        <!-- 3. ATAKI -->
+        <section>
+            <h2>> ATAKI NA JWT</h2>
+            <p>Co może pójść nie tak? Całkiem sporo.</p>
+
+            <div class="card">
+                <h3>1. ALGORITHM: NONE (Obejście podpisu)</h3>
+                <p>Niektóre biblioteki JWT wspierają algorytm <code>none</code> (używany do debugowania).</p>
+                <p><strong>Atak:</strong>
+                <ol>
+                    <li>Bierzesz token.</li>
+                    <li>Zmieniasz w Headerze: <code>"alg": "none"</code>.</li>
+                    <li>Zmieniasz w Payloadzie: <code>"role": "admin"</code>.</li>
+                    <li>Usuwasz podpis (zostawiasz kropkę na końcu).</li>
+                    <li>Wysyłasz do serwera. Jeśli backend jest źle skonfigurowany -> Jesteś adminem.</li>
+                </ol>
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>2. WEAK SECRET (Łamanie HMAC)</h3>
+                <p>Jeśli programista użył słabego sekretu (np. "secret", "12345", "key"), możesz go złamać offline
+                    używając <strong>Hashcat</strong> lub <strong>John the Ripper</strong>.</p>
+                <p>Gdy poznasz sekret, możesz generować własne, poprawne tokeny dla dowolnego użytkownika.</p>
+            </div>
+
+            <div class="card">
+                <h3>3. BRAK WERYFIKACJI PODPISU</h3>
+                <p>Najgłupszy błąd, ale się zdarza. Serwer dekoduje Payload, ufa mu, ale... zapomina sprawdzić
+                    Signature. Wtedy możesz wpisać tam cokolwiek.</p>
+            </div>
+        </section>
+
+        <!-- CHECKLIST -->
+        <section>
+            <h2>CHECKLISTA / RED FLAGS</h2>
+            <div class="card checklist-card">
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Wrażliwe dane w Payload:</strong> PESEL, adresy, numery telefonów w Base64. To wyciek
+                        danych (Information Disclosure).</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Algorytm 'None':</strong> Zawsze sprawdzaj, czy serwer przyjmie token z wyłączonym
+                        podpisywaniem.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Brak daty ważności (exp):</strong> Token, który nigdy nie wygasa, jest niebezpieczny.
+                        Jeśli ktoś go ukradnie, ma dostęp na zawsze.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Token w LocalStorage:</strong> JWT trzymany w LocalStorage jest podatny na kradzież
+                        przez XSS (tak jak ciastka bez HttpOnly).</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QUIZ -->
+        <section id="quiz-section">
+            <h2>🎓 WERYFIKACJA WIEDZY</h2>
+            <div id="quiz-container"></div>
+        </section>
+
+        <footer>
+            <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Kurs Pentestera | Moduł 07</p>
+        </footer>
+    </div>
+
+    <!-- DANE DO QUIZU -->
+    <script>
+        const quizData = [
+            {
+                question: "Z ilu części składa się token JWT i czym są rozdzielone?",
+                options: [
+                    "Z dwóch części rozdzielonych myślnikiem.",
+                    "Z trzech części rozdzielonych kropką (Header.Payload.Signature).",
+                    "To jeden ciąg znaków zaszyfrowany AES.",
+                    "Z nagłówka i ciała, jak HTML."
+                ],
+                correct: 1,
+                explanation: "Struktura to AAAAA.BBBBB.CCCCC. Pierwsza część to nagłówek, druga to dane (payload), trzecia to podpis cyfrowy."
+            },
+            {
+                question: "Czy dane w sekcji Payload (środek tokena) są zaszyfrowane?",
+                options: [
+                    "Tak, są bezpieczne i nikt ich nie odczyta.",
+                    "Nie. Są tylko zakodowane w Base64Url. Każdy może je odkodować i przeczytać.",
+                    "Tak, ale tylko serwer ma klucz.",
+                    "Zależy od przeglądarki."
+                ],
+                correct: 1,
+                explanation: "To kluczowe dla pentestera. Base64 to kodowanie (jak tłumaczenie na inny język), a nie szyfrowanie. Wrzuć token do jwt.io, a zobaczysz wszystko."
+            },
+            {
+                type: "scenario",
+                question: "Przechwyciłeś token JWT. Zmieniasz w nim 'user_id' z 100 na 1 (admin), ale nie ruszasz podpisu. Wysyłasz go do serwera. Co się stanie (w poprawnie zabezpieczonym systemie)?",
+                options: [
+                    "Serwer zaakceptuje token i da Ci uprawnienia admina.",
+                    "Serwer odrzuci token, ponieważ podpis nie będzie pasował do zmienionego Payloadu.",
+                    "Serwer naprawi podpis automatycznie.",
+                    "Wystąpi błąd 500."
+                ],
+                correct: 1,
+                explanation: "Podpis jest matematyczną sumą oryginału. Zmiana danych sprawia, że stary podpis staje się nieważny. Bez sekretnego klucza nie wygenerujesz nowego, poprawnego podpisu."
+            },
+            {
+                question: "Na czym polega atak 'None Algorithm'?",
+                options: [
+                    "Na wysłaniu pustego tokena.",
+                    "Na zmianie nagłówka tokena na {'alg': 'none'} i usunięciu podpisu, licząc na to, że serwer pominie weryfikację.",
+                    "Na usunięciu Payloadu.",
+                    "Na ataku DDoS."
+                ],
+                correct: 1,
+                explanation: "To błąd implementacji w niektórych bibliotekach. Jeśli serwer widzi 'alg: none', może uznać: 'Aha, ten token nie wymaga podpisu' i zaufać danym."
+            },
+            {
+                question: "Do czego służy pole 'exp' (Expiration Time) w JWT?",
+                options: [
+                    "Określa datę ważności tokena. Po tym czasie serwer powinien go odrzucić.",
+                    "To skrót od 'export'.",
+                    "Zawiera hasło użytkownika.",
+                    "Określa poziom doświadczenia (experience) w grze."
+                ],
+                correct: 0,
+                explanation: "Tokeny JWT (zazwyczaj) nie mogą być unieważnione (revoked) przed czasem. Dlatego 'exp' powinien być krótki (np. 15 min), aby zminimalizować ryzyko w razie kradzieży."
+            },
+            {
+                type: "scenario",
+                question: "Znalazłeś token JWT, który w Payloadzie zawiera: 'eyJlbWFpbCI6ImphbkBmaXJtYS5wbCIsInBlc2VsIjoiOTAwMTAx...'. Dekodujesz go i widzisz numery PESEL. Jakie to ryzyko?",
+                options: [
+                    "Critical - Wyciek danych osobowych (Information Disclosure).",
+                    "Low - Base64 jest bezpieczny.",
+                    "None - To normalna praktyka.",
+                    "Medium - Tylko jeśli PESEL jest prawdziwy."
+                ],
+                correct: 0,
+                explanation: "Przechowywanie danych wrażliwych (PII) w JWT to błąd. Tokeny często lądują w logach serwera, historii przeglądarki lub LocalStorage, gdzie są łatwo dostępne."
+            },
+            {
+                question: "W jaki sposób można złamać podpis JWT (HS256) offline?",
+                options: [
+                    "Nie da się, to niemożliwe.",
+                    "Używając narzędzi typu Hashcat/John the Ripper do ataku słownikowego (brute-force) na sekretny klucz.",
+                    "Wysyłając milion zapytań do serwera.",
+                    "Zmieniając datę w systemie."
+                ],
+                correct: 1,
+                explanation: "Jeśli klucz (Secret) jest słaby (np. 'secret123'), haker może na swoim superkomputerze sprawdzać miliony kombinacji na sekundę, aż znajdzie tę, która pasuje do podpisu."
+            },
+            {
+                type: "scenario",
+                question: "Dlaczego trzymanie JWT w LocalStorage jest uważane za ryzykowne?",
+                options: [
+                    "Bo zajmuje dużo miejsca.",
+                    "Bo każdy kod JavaScript (w tym ten wstrzyknięty przez XSS) ma dostęp do LocalStorage i może ukraść token.",
+                    "Bo LocalStorage kasuje się po restarcie komputera.",
+                    "Bo nie działa w trybie Incognito."
+                ],
+                correct: 1,
+                explanation: "To główna wada JWT na frontendzie. Ciasteczka `HttpOnly` są chronione przed XSS. LocalStorage jest otwarte dla każdego skryptu JS."
+            },
+            {
+                question: "Co to jest 'alg' w nagłówku JWT?",
+                options: [
+                    "Algorytm użyty do podpisania tokena (np. HS256, RS256).",
+                    "Algebraiczna suma kontrolna.",
+                    "Skrót od 'algorithm' oznaczający szyfrowanie danych.",
+                    "Nazwa użytkownika (alias)."
+                ],
+                correct: 0,
+                explanation: "Nagłówek mówi serwerowi: 'Użyj algorytmu X, aby sprawdzić mój podpis'. Ataki polegają często na manipulacji tym polem (None attack, Algo Confusion)."
+            },
+            {
+                type: "scenario",
+                question: "Serwer używa asymetrycznego RS256 (Klucz prywatny do podpisu, publiczny do weryfikacji). Atakujący zmienia w tokenie algorytm na symetryczny HS256 i podpisuje token KLUCZEM PUBLICZNYM (który jest jawny). Serwer to akceptuje. Co to za atak?",
+                options: [
+                    "SQL Injection.",
+                    "Key Confusion / Algorithm Confusion Attack.",
+                    "Brute Force.",
+                    "Man in the Middle."
+                ],
+                correct: 1,
+                explanation: "To zaawansowany i piękny atak. Serwer myśli: 'Mam zweryfikować HS256? Ok, użyję mojego klucza'. Ale w RS256 kluczem weryfikującym jest plik publiczny. Atakujący wymusił użycie klucza publicznego jako 'sekretu' HMAC."
+            }
+        ];
+    </script>
+
+    <script src="quiz.js"></script>
+
+</body>
+
+</html>

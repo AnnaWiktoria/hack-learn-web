@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 16: XML & XXE - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Amber (Structure / Warnings) */
+        :root {
+            --accent: #ffab00;
+            --accent-glow: rgba(255, 171, 0, 0.3);
+        }
+        
+        .xml-tag { color: #ffab00; }
+        .xml-attr { color: #00e5ff; }
+        .xml-val { color: #fff; }
+        .xml-entity { color: #ff0055; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>XML & XXE INJECTION</h1>
+        <p>MODUŁ 16: Parsery XML, Kradzież plików i Billion Laughs Attack</p>
+    </header>
+
+    <!-- 1. MECHANIZM -->
+    <section>
+        <h2>> DTD: ZMIENNE W XML</h2>
+        <p>XML to starszy brat JSON-a. Służy do przesyłania danych. Jego unikalną cechą jest <strong>DTD (Document Type Definition)</strong> – sekcja na górze pliku, gdzie można definiować własne "zmienne" (Encje).</p>
+        
+        <div class="card">
+            <h3>JAK DZIAŁA ENTITY?</h3>
+            <p>To jak zmienna w programowaniu. Definiujesz ją raz, używasz wiele razy.</p>
+            <pre><code><span class="xml-tag">&lt;!DOCTYPE</span> foo [
+  <span class="xml-tag">&lt;!ENTITY</span> <span class="xml-attr">firma</span> <span class="xml-val">"Microsoft"</span>&gt;
+]&gt;
+<span class="xml-tag">&lt;product&gt;</span>&firma;<span class="xml-tag">&lt;/product&gt;</span></code></pre>
+            <p>Parser XML zamieni <code>&firma;</code> na słowo <code>Microsoft</code>.</p>
+        </div>
+    </section>
+
+    <!-- 2. ATAK XXE -->
+    <section>
+        <h2>> XXE (EXTERNAL ENTITY)</h2>
+        <p>Problem pojawia się, gdy użyjesz słowa kluczowego <strong>SYSTEM</strong>. Pozwala ono zdefiniować zmienną, której wartością jest <strong>zawartość pliku zewnętrznego</strong>.</p>
+
+        <div class="card">
+            <h3>1. FILE DISCLOSURE (Kradzież plików)</h3>
+            <p>Atakujący wysyła złośliwy XML do API:</p>
+            <pre><code><span class="xml-tag">&lt;!DOCTYPE</span> foo [
+  <span class="xml-tag">&lt;!ENTITY</span> <span class="xml-entity">xxe</span> <span class="xml-tag">SYSTEM</span> <span class="xml-val">"file:///etc/passwd"</span>&gt;
+]&gt;
+<span class="xml-tag">&lt;user&gt;</span>&xxe;<span class="xml-tag">&lt;/user&gt;</span></code></pre>
+            <p><strong>Efekt:</strong> Jeśli parser jest źle skonfigurowany (włączone DTD), wczyta zawartość pliku <code>/etc/passwd</code>, wstawi go w miejsce <code>&xxe;</code> i wyświetli w odpowiedzi (np. jako nazwę użytkownika).</p>
+        </div>
+
+        <div class="card">
+            <h3>2. SSRF VIA XXE</h3>
+            <p>Zamiast pliku, możesz podać adres URL.</p>
+            <pre><code><span class="xml-tag">&lt;!ENTITY</span> <span class="xml-entity">xxe</span> <span class="xml-tag">SYSTEM</span> <span class="xml-val">"http://169.254.169.254/"</span>&gt;</code></pre>
+            <p>Serwer połączy się z adresem w chmurze (AWS Metadata) lub siecią wewnętrzną. To klasyczny SSRF, ale wywołany przez parser XML.</p>
+        </div>
+    </section>
+
+    <!-- 3. UKRYTE WEKTORY -->
+    <section>
+        <h2>> GDZIE SZUKAĆ XML?</h2>
+        <p>XML nie zawsze ma rozszerzenie <code>.xml</code>. Ukrywa się w wielu nowoczesnych formatach.</p>
+
+        <div class="card">
+            <h3>SVG (OBRAZKI) 🖼️</h3>
+            <p>SVG to tak naprawdę kod XML opisujący grafikę. Możesz wstrzyknąć XXE do pliku graficznego!</p>
+            <pre><code>&lt;svg width="100" height="100" xmlns="..."&gt;
+  <span class="xml-tag">&lt;!DOCTYPE</span> svg [ <span class="xml-tag">&lt;!ENTITY</span> xxe SYSTEM "file:///etc/hostname"&gt; ]&gt;
+  &lt;text&gt;&xxe;&lt;/text&gt;
+&lt;/svg&gt;</code></pre>
+            <p>Jeśli serwer generuje miniaturkę z tego SVG, wypisze na niej nazwę hosta serwera.</p>
+        </div>
+
+        <div class="card">
+            <h3>PLIKI OFFICE (.docx, .xlsx) 📄</h3>
+            <p>Pliki Worda i Excela to tak naprawdę spakowane ZIP-y zawierające pliki XML. Możesz:</p>
+            <ol>
+                <li>Zmienić nazwę <code>dokument.docx</code> na <code>dokument.zip</code>.</li>
+                <li>Rozpakować, edytować plik XML w środku (dodając payload XXE).</li>
+                <li>Spakować ponownie i wgrać na serwer.</li>
+            </ol>
+        </div>
+
+        <div class="card" style="border-color: var(--danger);">
+            <h3>BILLION LAUGHS ATTACK (DoS) 💣</h3>
+            <p>Definiujesz zmienną "lol", która zawiera 10 razy "lol". Potem zmienną "lol2", która zawiera 10 razy "lol1"...</p>
+            <p>Mały plik XML (kilka KB) po rozpakowaniu w pamięci zajmuje <strong>gigabajty RAM-u</strong>, zawieszając serwer.</p>
+        </div>
+    </section>
+
+    <!-- CHECKLIST -->
+    <section>
+        <h2>CHECKLISTA / RED FLAGS</h2>
+        <div class="card checklist-card">
+            <div class="checklist-item">
+                <span class="check-icon">⚠</span>
+                <div><strong>Content-Type: application/xml:</strong> Jeśli API przyjmuje XML (lub SOAP), zawsze testuj XXE.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">⚠</span>
+                <div><strong>Upload SVG / Excel / PDF:</strong> Każdy parser plików opartych na XML jest potencjalnym celem.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">⚠</span>
+                <div><strong>JSON to XML converter:</strong> Czasami API przyjmuje JSON, ale można zmienić Content-Type na XML i serwer to obsłuży (downgrade attack).</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>🎓 WERYFIKACJA WIEDZY</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | Moduł 16</p>
+    </footer>
+</div>
+
+<!-- DANE DO QUIZU -->
+<script>
+    const quizData = [
+        {
+            question: "Co oznacza skrót XXE?",
+            options: [
+                "XML External Entity",
+                "XSS XML Encoder",
+                "Extreme XML Engine",
+                "X-Ray Entity"
+            ],
+            correct: 0,
+            explanation: "XXE to atak wykorzystujący funkcję parserów XML pozwalającą na ładowanie zewnętrznych encji (plików lub URLi)."
+        },
+        {
+            question: "Jaka sekcja w pliku XML jest odpowiedzialna za definiowanie encji (zmiennych)?",
+            options: [
+                "<body>",
+                "DTD (Document Type Definition) wewnątrz <!DOCTYPE>",
+                "<script>",
+                "<head>"
+            ],
+            correct: 1,
+            explanation: "Podatność XXE istnieje tylko wtedy, gdy parser przetwarza DTD. W bezpiecznych konfiguracjach DTD jest całkowicie wyłączone."
+        },
+        {
+            type: "scenario",
+            question: "Chcesz odczytać plik `/etc/passwd`. Jakiego słowa kluczowego użyjesz w definicji encji?",
+            options: [
+                "LOCAL",
+                "SYSTEM",
+                "PUBLIC",
+                "INCLUDE"
+            ],
+            correct: 1,
+            explanation: "Składnia to: `<!ENTITY nazwa SYSTEM 'URI'>`. Słowo SYSTEM mówi parserowi: 'pobierz dane z tego źródła'."
+        },
+        {
+            question: "Który z poniższych formatów plików jest technicznie XML-em i może być podatny na XXE?",
+            options: [
+                "JPG (JPEG)",
+                "SVG (Scalable Vector Graphics)",
+                "MP3",
+                "TXT"
+            ],
+            correct: 1,
+            explanation: "SVG to tekstowy format wektorowy oparty na XML. Przeglądarki i serwery parsują go tak samo jak każdy inny plik XML."
+        },
+        {
+            question: "Co to jest 'Billion Laughs Attack'?",
+            options: [
+                "Atak socjotechniczny polegający na wysyłaniu memów.",
+                "Atak typu Denial of Service (DoS) wykorzystujący rekurencyjne encje XML, które po rozwinięciu zajmują całą pamięć RAM serwera.",
+                "Atak na hasła.",
+                "Atak na pliki dźwiękowe."
+            ],
+            correct: 1,
+            explanation: "To tzw. XML Bomb. Mały plik wejściowy (np. encja A = 10 x B, B = 10 x C...) zamienia się w gigabajty danych w pamięci."
+        },
+        {
+            question: "Czy JSON jest podatny na XXE?",
+            options: [
+                "Tak, zawsze.",
+                "Nie, JSON nie posiada mechanizmu DTD ani zewnętrznych referencji (chyba że aplikacja konwertuje JSON na XML w tle).",
+                "Tak, ale tylko w Javie.",
+                "Zależy od przeglądarki."
+            ],
+            correct: 1,
+            explanation: "JSON to prosty format danych. XML to format z 'bajerami' (jak DTD). To właśnie te 'bajery' powodują luki bezpieczeństwa. Dlatego JSON jest bezpieczniejszy."
+        },
+        {
+            type: "scenario",
+            question: "Testujesz upload plików `.xlsx` (Excel). Jak sprawdzisz podatność XXE?",
+            options: [
+                "Wpiszę kod SQL w komórkę arkusza.",
+                "Zmienię rozszerzenie na .zip, rozpakuję, zmodyfikuję pliki XML wewnątrz (dodając payload XXE), spakuję z powrotem i wgram.",
+                "Zmienię nazwę na .exe.",
+                "Otworzę plik w notatniku."
+            ],
+            correct: 1,
+            explanation: "Dokumenty Office (Open XML) to tak naprawdę spakowane struktury XML. Serwer przy ich przetwarzaniu musi je rozpakować i sparsować XML."
+        },
+        {
+            question: "Co to jest 'Blind XXE'?",
+            options: [
+                "Sytuacja, gdy parser wykonuje XXE, ale nie zwraca treści pliku w odpowiedzi. Atakujący musi użyć kanału bocznego (OOB - Out of Band), np. wysyłając dane na swój serwer.",
+                "Atak na serwer bez monitora.",
+                "Atak, który nie działa.",
+                "Atak na pliki ukryte."
+            ],
+            correct: 0,
+            explanation: "W Blind XXE używamy np. parametru URL, by zmusić serwer do wysłania zawartości pliku (`/etc/passwd`) jako parametru GET do naszego serwera (`hacker.com/?data=...`)."
+        },
+        {
+            question: "Jak najlepiej zabezpieczyć się przed XXE?",
+            options: [
+                "Filtrować słowo SYSTEM.",
+                "Całkowicie wyłączyć przetwarzanie DTD i External Entities w konfiguracji parsera XML (np. `disallow-doctype-decl` w libxml).",
+                "Używać WAF.",
+                "Nie używać SVG."
+            ],
+            correct: 1,
+            explanation: "To jedyna pewna metoda. Jeśli parser nie obsługuje DTD, atak XXE jest niemożliwy technicznie."
+        },
+        {
+            question: "Co można osiągnąć dzięki XXE oprócz kradzieży plików?",
+            options: [
+                "SQL Injection.",
+                "SSRF (Server-Side Request Forgery) - skanowanie sieci wewnętrznej i portów z poziomu serwera.",
+                "XSS w bazie danych.",
+                "Przejęcie ciasteczek."
+            ],
+            correct: 1,
+            explanation: "Ponieważ parser XML może wykonywać żądania HTTP (np. `SYSTEM 'http://localhost:8080'`), XXE jest świetnym wektorem do SSRF."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

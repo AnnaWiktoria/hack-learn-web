@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="AnnaWiktoria">
+    <meta name="copyright" content="AnnaWiktoria">
+    <meta name="description" content="Interaktywny kurs bezpieczeństwa aplikacji webowych. Licencja CC BY-NC-SA.">
+
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; 
+               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
+               font-src 'self' https://fonts.gstatic.com; 
+               script-src 'self' 'unsafe-inline'; 
+               img-src 'self' data:;">
+
+    <title>Kurs bezpieczeństwa aplikacji webowych - Hack & Learn: Web Edition</title>
+
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* --- DEFINICJE KOLORÓW DLA STREF --- */
+        .zone-1 {
+            --theme-color: #00e5ff;
+        }
+
+        /* Cyan */
+        .zone-2 {
+            --theme-color: #ffea00;
+        }
+
+        /* Green */
+        .zone-3 {
+            --theme-color: #00f510;
+        }
+
+        /* Pink */
+        .zone-4 {
+            --theme-color: #7c4dff;
+        }
+
+        /* Indigo */
+        .zone-5 {
+            --theme-color: #ff299b;
+        }
+
+        /* Blue (Audit) */
+        .zone-6 {
+            --theme-color: #00b0ff;
+        }
+
+        /* Shield Blue (Defense) */
+
+        /* FINAL EXAM STYLE */
+        .zone-final {
+            --theme-color: #ffffff;
+        }
+
+        .mission-item.final-exam {
+            border: 2px solid #fff;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.8));
+            margin-top: 40px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+
+        .mission-item.final-exam .mission-title {
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px #fff;
+        }
+
+        .mission-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .module-header {
+            color: var(--theme-color);
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 50px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+
+        .module-header::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: var(--theme-color);
+            margin-right: 10px;
+            box-shadow: 0 0 10px var(--theme-color);
+        }
+
+        .mission-item {
+            background: #111;
+            border: 1px solid #333;
+            border-left: 3px solid transparent;
+            margin-bottom: 10px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 4px;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mission-item:hover {
+            border-color: var(--theme-color);
+            border-left-color: var(--theme-color);
+            transform: translateX(10px);
+            background: #161616;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .mission-item.boss-battle {
+            border: 1px solid var(--theme-color);
+            background: linear-gradient(90deg, rgba(0, 0, 0, 1) 0%, rgba(20, 20, 20, 1) 100%);
+        }
+
+        .mission-item.completed {
+            border-color: #00ff00;
+            background: rgba(0, 255, 0, 0.05);
+        }
+
+        .mission-item.completed .mission-id {
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .mission-item.completed .status-dot {
+            background-color: #00ff00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        .mission-link {
+            text-decoration: none;
+            color: #fff;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 2;
+        }
+
+        .mission-id {
+            font-family: var(--font-mono);
+            color: var(--theme-color);
+            font-weight: bold;
+            margin-right: 20px;
+            font-size: 1.1rem;
+            opacity: 0.8;
+        }
+
+        .mission-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            height: 8px;
+            width: 8px;
+            background-color: #333;
+            border-radius: 50%;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>HACK & LEARN: WEB EDITION</h1>
+            <p>KURS BEZPIECZEŃSTWA APLIKACJI WEBOWYCH</p>
+        </header>
+
+        <section>
+            <h2>> DOSTĘPNE MISJE</h2>
+
+            <ul class="mission-list">
+
+                <!-- MODUŁ 1: FUNDAMENTY -->
+                <div class="zone-1">
+                    <div class="module-header">/// MODUŁ 1: FUNDAMENTY & TOP 10</div>
+                    <li class="mission-item"><a href="1.html" class="mission-link">
+                            <div><span class="mission-id">[01]</span> Metody HTTP & Idempotencja</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="2.html" class="mission-link">
+                            <div><span class="mission-id">[02]</span> Statusy HTTP & Kody Błędów</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="3.html" class="mission-link">
+                            <div><span class="mission-id">[03]</span> Cookies, Sesje & Bezpieczeństwo</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="4.html" class="mission-link">
+                            <div><span class="mission-id">[04]</span> Security Headers (CSP, HSTS)</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="5.html" class="mission-link">
+                            <div><span class="mission-id">[05]</span> SOP & CORS (Granice Internetu)</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="6.html" class="mission-link">
+                            <div><span class="mission-id">[06]</span> AuthN vs AuthZ (IDOR, BAC)</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="7.html" class="mission-link">
+                            <div><span class="mission-id">[07]</span> JWT (JSON Web Tokens)</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="8.html" class="mission-link">
+                            <div><span class="mission-id">[08]</span> SQL Injection (SQLi)</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="9.html" class="mission-link">
+                            <div><span class="mission-id">[09]</span> XSS (Cross-Site Scripting)</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="10.html" class="mission-link">
+                            <div><span class="mission-id">[10]</span> SSRF (Server-Side Request Forgery)</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item boss-battle"><a href="exam_1.html" class="mission-link">
+                            <div><span class="mission-id">⚔️</span> <strong>EGZAMIN: FUNDAMENTY</strong></div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                </div>
+
+                <!-- MODUŁ 2: SYSTEM -->
+                <div class="zone-2">
+                    <div class="module-header">/// MODUŁ 2: SYSTEM & FILES</div>
+                    <li class="mission-item"><a href="11.html" class="mission-link">
+                            <div><span class="mission-id">[11]</span> OS Command Injection</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="12.html" class="mission-link">
+                            <div><span class="mission-id">[12]</span> Path Traversal & LFI</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="13.html" class="mission-link">
+                            <div><span class="mission-id">[13]</span> File Upload Vulnerabilities</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item boss-battle"><a href="exam_2.html" class="mission-link">
+                            <div><span class="mission-id">⚔️</span> <strong>EGZAMIN: SYSTEM ACCESS</strong></div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                </div>
+
+                <!-- MODUŁ 3: MODERN -->
+                <div class="zone-3">
+                    <div class="module-header">/// MODUŁ 3: MODERN WEB</div>
+                    <li class="mission-item"><a href="14.html" class="mission-link">
+                            <div><span class="mission-id">[14]</span> API Security (BOLA/IDOR)</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="15.html" class="mission-link">
+                            <div><span class="mission-id">[15]</span> SPA & Client-Side Pitfalls</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="16.html" class="mission-link">
+                            <div><span class="mission-id">[16]</span> XML & XXE Injection</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item boss-battle"><a href="exam_3.html" class="mission-link">
+                            <div><span class="mission-id">⚔️</span> <strong>EGZAMIN: MODERN WEB</strong></div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                </div>
+
+                <!-- MODUŁ 4: LOGIC -->
+                <div class="zone-4">
+                    <div class="module-header">/// MODUŁ 4: LOGIC & STRATEGY</div>
+                    <li class="mission-item"><a href="17.html" class="mission-link">
+                            <div><span class="mission-id">[17]</span> Business Logic & Race Conditions</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="18.html" class="mission-link">
+                            <div><span class="mission-id">[18]</span> HTTP Request Smuggling</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item boss-battle"><a href="exam_4.html" class="mission-link">
+                            <div><span class="mission-id">⚔️</span> <strong>EGZAMIN: LOGIC & STRATEGY</strong></div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                </div>
+
+                <!-- MODUŁ 5: AUDIT -->
+                <div class="zone-5">
+                    <div class="module-header">/// MODUŁ 5: PROFESSIONAL AUDIT</div>
+                    <li class="mission-item"><a href="19.html" class="mission-link">
+                            <div><span class="mission-id">[19]</span> Micro-Labs: Analysis</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="20.html" class="mission-link">
+                            <div><span class="mission-id">[20]</span> Decision Labs: Triage</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="21.html" class="mission-link">
+                            <div><span class="mission-id">[21]</span> Audit Scope & Legal</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="22.html" class="mission-link">
+                            <div><span class="mission-id">[22]</span> Advanced Recon & OSINT</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="23.html" class="mission-link">
+                            <div><span class="mission-id">[23]</span> Vulnerability Chaining</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="24.html" class="mission-link">
+                            <div><span class="mission-id">[24]</span> Reporting & CVSS</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item boss-battle"><a href="exam_5.html" class="mission-link">
+                            <div><span class="mission-id">⚔️</span> <strong>EGZAMIN: AUDIT MASTER</strong></div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                </div>
+
+                <!-- MODUŁ 6: BLUE TEAM -->
+                <div class="zone-6">
+                    <div class="module-header">/// MODUŁ 6: BLUE TEAM & HARDENING</div>
+                    <li class="mission-item"><a href="25.html" class="mission-link">
+                            <div><span class="mission-id">[25]</span> Secure Architecture (CSP/HSTS)</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="26.html" class="mission-link">
+                            <div><span class="mission-id">[26]</span> Input Validation & Sanitization</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="27.html" class="mission-link">
+                            <div><span class="mission-id">[27]</span> WAF & Monitoring</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item"><a href="28.html" class="mission-link">
+                            <div><span class="mission-id">[28]</span> Supply Chain Security</div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                    <li class="mission-item boss-battle"><a href="exam_6.html" class="mission-link">
+                            <div><span class="mission-id">⚔️</span> <strong>EGZAMIN: BLUE TEAM</strong></div>
+                            <div class="status-dot"></div>
+                        </a></li>
+                </div>
+
+                <!-- FINAL EXAM -->
+                <div class="zone-final">
+                    <li class="mission-item final-exam">
+                        <a href="final_exam.html" class="mission-link">
+                            <div><span class="mission-id">🏆</span> <strong>EGZAMIN FINAŁOWY</strong></div>
+                            <div class="status-dot"></div>
+                        </a>
+                    </li>
+                </div>
+
+            </ul>
+        </section>
+
+        <footer style="text-align:center; margin-top:60px; color:#555; font-size:0.8rem;">
+            <p>HACK & LEARN: WEB EDITION</p>
+            <p style="margin-top:10px; opacity: 0.6;">
+                © 2026 AnnaWiktoria. Udostępniono na licencji
+                <a href="http://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank"
+                    style="color:#777; text-decoration:underline;">CC BY-NC-SA 4.0</a>.
+                <br><strong>NOT FOR SALE / NIE NA SPRZEDAŻ</strong>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const links = document.querySelectorAll('.mission-link');
+            links.forEach(link => {
+                const href = link.getAttribute('href');
+                const isDone = localStorage.getItem('mission_complete_' + href);
+                if (isDone === 'true') {
+                    const listItem = link.closest('.mission-item');
+                    listItem.classList.add('completed');
+                    const dot = listItem.querySelector('.status-dot');
+                    if (dot) { dot.style.backgroundColor = '#00ff00'; dot.style.boxShadow = '0 0 10px #00ff00'; }
+                }
+            });
+        });
+    </script>
+
+</body>
+
+</html>

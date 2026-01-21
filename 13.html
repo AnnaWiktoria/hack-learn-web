@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 13: File Upload - Kurs Pentestera</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Biohazard Purple (Malicious Files / Infection) */
+        :root {
+            --accent: #ea00d9;
+            --accent-glow: rgba(234, 0, 217, 0.3);
+        }
+
+        .extension {
+            color: #00e5ff;
+            font-weight: bold;
+        }
+
+        .magic-bytes {
+            color: #ffd600;
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>FILE UPLOAD ATTACKS</h1>
+            <p>MODUŁ 13: Webshelle, Magic Bytes i Omijanie Filtrów</p>
+        </header>
+
+        <!-- 1. MECHANIZM -->
+        <section>
+            <h2>> NIEBEZPIECZNY IMPORT</h2>
+            <p>Funkcja wgrywania plików (awatary, CV, dokumenty) to krytyczny punkt ataku. Jeśli serwer nie sprawdzi
+                dokładnie, CO wgrywasz, możesz przejąć nad nim kontrolę.</p>
+
+            <div class="card">
+                <h3>CEL: WEBSHELL</h3>
+                <p>Nie chcemy wgrać wirusa. Chcemy wgrać mały skrypt (Webshell), który pozwoli nam wykonywać komendy
+                    systemowe przez przeglądarkę.</p>
+                <pre><code><span class="comment">// Najprostszy shell w PHP (shell.php):</span>
+&lt;?php system($_GET['cmd']); ?&gt;</code></pre>
+                <p><strong>Scenariusz:</strong></p>
+                <ol>
+                    <li>Wgrywasz plik <code>shell.php</code> jako swój "awatar".</li>
+                    <li>Otwierasz go w przeglądarce: <code>site.com/uploads/shell.php?cmd=whoami</code>.</li>
+                    <li>Serwer wykonuje kod PHP i zwraca wynik: <code>root</code>. Masz RCE.</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- 2. OMIJANIE FILTRÓW -->
+        <section>
+            <h2>> GRA W KOTKA I MYSZKĘ (BYPASS)</h2>
+            <p>Programiści próbują blokować pliki <code>.php</code>. Jak ich oszukać?</p>
+
+            <div class="card">
+                <h3>1. ZMIANA ROZSZERZENIA (Blacklist Bypass)</h3>
+                <p>Jeśli serwer blokuje <code>.php</code>, spróbuj alternatyw, które serwer WWW nadal może wykonać:</p>
+                <ul>
+                    <li>PHP: <span class="extension">.php5, .phtml, .phar, .php7</span></li>
+                    <li>JSP: <span class="extension">.jspx, .jsw, .jsv</span></li>
+                    <li>ASP: <span class="extension">.cer, .asa, .aspx</span></li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>2. ZMIANA CONTENT-TYPE</h3>
+                <p>Serwer często ufa temu, co mówi przeglądarka. W Burp Suite możesz przechwycić żądanie i zmienić typ
+                    pliku bez zmiany jego treści.</p>
+                <pre><code><span class="comment"># Oryginał:</span>
+Content-Type: application/x-php
+
+<span class="comment"># Zmiana (oszukujemy serwer):</span>
+Content-Type: image/jpeg</code></pre>
+            </div>
+
+            <div class="card">
+                <h3>3. MAGIC BYTES (Sygnatury plików)</h3>
+                <p>Bardziej zaawansowane serwery sprawdzają zawartość pliku. Pliki GIF zawsze zaczynają się od
+                    <code>GIF89a</code>.</p>
+                <p><strong>Atak (Polyglot):</strong> Doklejamy nagłówek GIF do naszego skryptu PHP.</p>
+                <pre><code><span class="magic-bytes">GIF89a</span>;
+&lt;?php system($_GET['cmd']); ?&gt;</code></pre>
+                <p>Serwer myśli: "To poprawny obrazek GIF". PHP myśli: "Wykonam kod po nagłówku".</p>
+            </div>
+        </section>
+
+        <!-- 3. ZAAWANSOWANE TECHNIKI -->
+        <section>
+            <h2>> EGZOTYCZNE PRZYPADKI</h2>
+
+            <div class="card">
+                <h3>DOUBLE EXTENSIONS & NULL BYTE</h3>
+                <ul>
+                    <li><strong>Apache Misconfiguration:</strong> Plik <code>shell.php.jpg</code> może zostać wykonany
+                        jako PHP, jeśli serwer jest źle skonfigurowany (wykonuje pierwszą rozpoznaną końcówkę).</li>
+                    <li><strong>Null Byte Injection:</strong> <code>shell.php%00.jpg</code>. Serwer sprawdza końcówkę
+                        <code>.jpg</code> (jest OK), ale system plików ucina nazwę na znaku Null, zapisując
+                        <code>shell.php</code>.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>PUT METHOD</h3>
+                <p>Czasami serwer ma włączony protokół WebDAV. Możesz wgrać plik bez formularza:</p>
+                <pre><code>PUT /uploads/hacker.php HTTP/1.1
+Host: target.com
+Content-Length: 20
+
+&lt;?php phpinfo(); ?&gt;</code></pre>
+            </div>
+        </section>
+
+        <!-- CHECKLIST -->
+        <section>
+            <h2>CHECKLISTA / RED FLAGS</h2>
+            <div class="card checklist-card">
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Katalog Uploadów dostępny publicznie:</strong> Jeśli możesz otworzyć wgrany plik
+                        bezpośrednio w przeglądarce, to połowa sukcesu ataku.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Brak zmiany nazwy pliku:</strong> Serwer powinien zmieniać nazwę na losową (np.
+                        uuid.jpg). Jeśli zachowuje `shell.php`, to błąd.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>SVG Upload:</strong> Pliki SVG to XML. Można w nich ukryć XSS (`&lt;script&gt;`) lub
+                        XXE.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QUIZ -->
+        <section id="quiz-section">
+            <h2>🎓 WERYFIKACJA WIEDZY</h2>
+            <div id="quiz-container"></div>
+        </section>
+
+        <footer>
+            <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Kurs Pentestera | Moduł 13</p>
+        </footer>
+    </div>
+
+    <!-- DANE DO QUIZU -->
+    <script>
+        const quizData = [
+            {
+                question: "Co to jest Webshell?",
+                options: [
+                    "Złośliwa strona internetowa.",
+                    "Mały skrypt (np. w PHP/ASP), który po wgraniu na serwer pozwala atakującemu wykonywać polecenia systemowe przez przeglądarkę.",
+                    "Powłoka ochronna serwera.",
+                    "Rodzaj bazy danych."
+                ],
+                correct: 1,
+                explanation: "Webshell to 'tylne wejście' (Backdoor). Pozwala zarządzać serwerem tak, jakbyś siedział przy jego terminalu, używając zwykłych żądań HTTP."
+            },
+            {
+                type: "scenario",
+                question: "Serwer blokuje pliki z rozszerzeniem '.php'. Jakiej alternatywy możesz spróbować na serwerze Apache/Linux?",
+                options: [
+                    ".exe",
+                    ".phtml lub .php5",
+                    ".jpg",
+                    ".txt"
+                ],
+                correct: 1,
+                explanation: "Często konfiguracja serwera WWW instruuje go, by traktował `.phtml`, `.php5` czy `.phar` tak samo jak `.php` - czyli wykonywał kod."
+            },
+            {
+                question: "Co to są 'Magic Bytes' (Sygnatura pliku)?",
+                options: [
+                    "Magiczne zaklęcia hakerów.",
+                    "Pierwsze bajty pliku, które identyfikują jego format (np. GIF89a dla obrazków GIF, %PDF dla dokumentów PDF).",
+                    "Rozszerzenie pliku.",
+                    "Rozmiar pliku w bajtach."
+                ],
+                correct: 1,
+                explanation: "Serwer może ignorować rozszerzenie i sprawdzać nagłówek pliku. Atakujący może dodać 'GIF89a' na początku skryptu PHP, aby oszukać ten mechanizm."
+            },
+            {
+                type: "scenario",
+                question: "Przechwytujesz żądanie w Burp Suite. Widzisz nagłówek 'Content-Type: application/x-php'. Na co go zmienisz, aby spróbować oszukać prosty filtr?",
+                options: [
+                    "application/json",
+                    "image/jpeg lub image/png",
+                    "text/plain",
+                    "Na nic, zostawiam bez zmian."
+                ],
+                correct: 1,
+                explanation: "Wiele aplikacji sprawdza TYLKO nagłówek Content-Type wysłany przez przeglądarkę. Haker może wysłać kod PHP, ale powiedzieć serwerowi: 'To jest zdjęcie'."
+            },
+            {
+                question: "Dlaczego wgrywanie plików SVG jest ryzykowne?",
+                options: [
+                    "Bo są duże.",
+                    "SVG to format oparty na XML. Może zawierać złośliwy JavaScript (XSS) lub ataki na parser XML (XXE).",
+                    "Bo mają słabą jakość.",
+                    "Bo nie działają na telefonach."
+                ],
+                correct: 1,
+                explanation: "SVG to nie jest 'zwykły obrazek' (raster), to kod (wektor). Przeglądarka interpretuje go i może wykonać zawarty w nim kod JS (Stored XSS)."
+            },
+            {
+                question: "Co to jest atak 'Polyglot' w kontekście File Upload?",
+                options: [
+                    "Plik wielojęzyczny.",
+                    "Plik, który jest jednocześnie poprawnym formatem A (np. obrazkiem GIF) i poprawnym formatem B (np. skryptem PHP).",
+                    "Wgrywanie wielu plików naraz.",
+                    "Szyfrowanie pliku."
+                ],
+                correct: 1,
+                explanation: "Polyglot przechodzi walidację (bo jest obrazkiem) i wykonuje się jako kod (bo zawiera PHP). To zaawansowana technika omijania zabezpieczeń."
+            },
+            {
+                question: "Jaka jest najlepsza obrona przed złośliwym uploadem?",
+                options: [
+                    "Sprawdzanie rozszerzenia.",
+                    "Zapisywanie plików poza katalogiem dostępnym z webu (webroot), zmiana nazwy na losową i usuwanie uprawnień do wykonywania (chmod -x).",
+                    "Używanie antywirusa.",
+                    "Blokowanie dużych plików."
+                ],
+                correct: 1,
+                explanation: "Jeśli plik nie jest w folderze publicznym serwera WWW (np. /var/www/uploads), to nawet jeśli jest wirusem, haker nie może go uruchomić przez URL."
+            },
+            {
+                type: "scenario",
+                question: "Udało Ci się wgrać 'shell.php', ale serwer zmienił jego nazwę na 'a1b2c3d4.jpg'. Czy atak się udał?",
+                options: [
+                    "Tak, masz RCE.",
+                    "Niekoniecznie. Jeśli serwer nie jest skonfigurowany do wykonywania plików .jpg jako PHP (co jest rzadkie) lub nie masz podatności LFI, to nie uruchomisz kodu.",
+                    "Tak, bo plik jest na serwerze.",
+                    "Zależy od przeglądarki."
+                ],
+                correct: 1,
+                explanation: "Samo wgranie pliku to połowa sukcesu. Musisz zmusić serwer do jego WYKONANIA. Pliki .jpg są zazwyczaj tylko wyświetlane, a nie interpretowane przez procesor PHP."
+            },
+            {
+                question: "Co może oznaczać plik o nazwie 'shell.php.jpg'?",
+                options: [
+                    "To wirus na Windowsa.",
+                    "Próba wykorzystania błędu konfiguracji Apache (Double Extension), gdzie serwer wykonuje plik, jeśli znajdzie w nazwie znane rozszerzenie (.php), nawet jeśli nie jest ono ostatnie.",
+                    "Błąd użytkownika.",
+                    "Plik skompresowany."
+                ],
+                correct: 1,
+                explanation: "To stara, ale jara technika. Jeśli Apache ma regułę `AddHandler php5-script .php`, to może wykonać każdy plik zawierający `.php` w nazwie."
+            },
+            {
+                question: "Jak metoda HTTP PUT może być wykorzystana do wgrania pliku?",
+                options: [
+                    "Nie może.",
+                    "Jeśli serwer ma włączony WebDAV i jest źle skonfigurowany, PUT pozwala na bezpośrednie zapisanie pliku pod wskazanym URL bez użycia formularza uploadu.",
+                    "PUT służy tylko do baz danych.",
+                    "To działa tylko na FTP."
+                ],
+                correct: 1,
+                explanation: "Narzędzia skanujące (jak Nikto) często sprawdzają metody HTTP. Jeśli wykryją PUT, to potencjalnie autostrada do wgrania webshella."
+            }
+        ];
+    </script>
+
+    <script src="quiz.js"></script>
+
+</body>
+
+</html>

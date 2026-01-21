@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 15: SPA & Client-Side Pitfalls - Hack & Learn: Web Edition</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Framework Violet (Modern JS / React vibe) */
+        :root {
+            --accent: #bb86fc;
+            --accent-glow: rgba(187, 134, 252, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>SPA & CLIENT-SIDE</h1>
+            <p>MODUŁ 15: React, Vue, JWT Storage i Frontend Routing</p>
+        </header>
+
+        <!-- 1. ROUTING VS AUTH -->
+        <section>
+            <h2>> ROUTING != AUTORYZACJA</h2>
+            <p>W tradycyjnym webie, jeśli chciałeś wejść na <code>/admin</code>, pytałeś serwer. W SPA (Single Page App)
+                to <strong>przeglądarka (JavaScript)</strong> decyduje, co widzisz na ekranie.</p>
+
+            <div class="card">
+                <h3>ILUZJA BEZPIECZEŃSTWA</h3>
+                <p>Programista pisze w React:</p>
+                <pre><code>{ user.role === 'ADMIN' ? &lt;AdminPanel /&gt; : &lt;AccessDenied /&gt; }</code></pre>
+
+                <p><strong>Błąd:</strong> Ukrycie komponentu <code>&lt;AdminPanel /&gt;</code> w HTML nic nie daje.
+                    Haker może:
+                <ol>
+                    <li>Odpalić "DevTools" i ręcznie zmienić swoją rolę w pamięci przeglądarki na 'ADMIN'. Zobaczy
+                        panel.</li>
+                    <li>Zignorować frontend i uderzyć bezpośrednio w API, z którym ten panel rozmawia (np.
+                        <code>POST /api/delete-user</code>).</li>
+                </ol>
+                </p>
+                <p><span class="highlight">ZASADA:</span> Frontend jest <strong>niezaufany</strong> (Untrusted). Każda
+                    ważna decyzja o uprawnieniach musi być zduplikowana na Backendzie.</p>
+            </div>
+        </section>
+
+        <!-- 2. GDZIE TRZYMAĆ TOKENY -->
+        <section>
+            <h2>> JWT STORAGE DILEMMA</h2>
+            <p>Gdzie bezpiecznie przechować token JWT po zalogowaniu? To odwieczny dylemat w SPA.</p>
+
+            <div class="card">
+                <h3>OPCJA 1: LocalStorage / SessionStorage ❌</h3>
+                <p>Najpopularniejsza i najgorsza metoda.</p>
+                <ul>
+                    <li><strong>Plus:</strong> Łatwe w użyciu dla programisty.</li>
+                    <li><strong>Minus:</strong> Pełna podatność na XSS. Dowolny skrypt (nawet złośliwa reklama) może
+                        zrobić <code>localStorage.getItem('token')</code> i przejąć konto.</li>
+                </ul>
+            </div>
+
+            <div class="card" style="border-color: var(--success);">
+                <h3>OPCJA 2: HttpOnly Cookies ✅</h3>
+                <p>Sposób rekomendowany przez specjalistów bezpieczeństwa.</p>
+                <ul>
+                    <li><strong>Plus:</strong> Ciasteczko <code>HttpOnly</code> jest <strong>niewidoczne</strong> dla
+                        JavaScriptu. XSS nie ukradnie tokena.</li>
+                    <li><strong>Haczyk:</strong> Przechodzisz na model Cookie, więc musisz się teraz martwić o
+                        <strong>CSRF</strong> (wymagane <code>SameSite=Strict</code>).</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 3. XSS W REACT / VUE -->
+        <section>
+            <h2>> XSS W NOWOCZESNYM WEBIE</h2>
+            <p>Mówi się, że React/Vue/Angular są "bezpieczne domyślnie", bo automatycznie uciekają (escape) znaki. To
+                prawda, ale deweloperzy zawsze znajdą sposób, by to zepsuć.</p>
+
+            <div class="card">
+                <h3>NIEBEZPIECZNE FUNKCJE (SINKI)</h3>
+                <p>Jeśli zobaczysz te atrybuty w kodzie źródłowym, szukaj XSS:</p>
+                <ul>
+                    <li><strong>React:</strong> <code>dangerouslySetInnerHTML</code> (Nazwa mówi sama za siebie).</li>
+                    <li><strong>Vue.js:</strong> <code>v-html</code>.</li>
+                    <li><strong>Angular:</strong> <code>[innerHTML]</code>.</li>
+                </ul>
+                <p><strong>Przykład ataku:</strong> Jeśli wejście do tych funkcji nie jest przefiltrowane biblioteką
+                    <code>DOMPurify</code>, payload <code>&lt;img src=x onerror=alert(1)&gt;</code> zadziała jak w 1999
+                    roku.</p>
+            </div>
+
+            <div class="card">
+                <h3>JAVASCRIPT PROTOCOL XSS</h3>
+                <p>Frameworki często nie blokują wpisywania złośliwych linków.</p>
+                <pre><code><span class="comment">// Kod profilu:</span>
+&lt;a href={user.website}&gt;Moja strona&lt;/a&gt;
+
+<span class="comment">// Atak (user podaje jako stronę):</span>
+javascript:alert(document.domain)</code></pre>
+                <p>Jeśli klikniesz w "Moja strona", wykonasz kod JS.</p>
+            </div>
+        </section>
+
+        <!-- CHECKLIST -->
+        <section>
+            <h2>CHECKLISTA / RED FLAGS</h2>
+            <div class="card checklist-card">
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Tokeny w LocalStorage:</strong> Odpal F12 -> Application -> LocalStorage. Widzisz
+                        `auth_token`? Zgłoś to jako "Sensitive Data Exposure via XSS".</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>"Gruby" kod JS (Source Mapping):</strong> Często na produkcji zostają pliki `.js.map`.
+                        Pozwalają one odtworzyć oryginalny kod aplikacji i znaleźć ukryte endpointy API.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Ceny w koszyku na froncie:</strong> Jeśli sklep internetowy przelicza sumę koszyka w
+                        React i wysyła gotową kwotę do API: "Pobierz od usera 5 PLN" -> Business Logic Flaw.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QUIZ -->
+        <section id="quiz-section">
+            <h2>🎓 WERYFIKACJA WIEDZY</h2>
+            <div id="quiz-container"></div>
+        </section>
+
+        <footer>
+            <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | Moduł
+                15</p>
+        </footer>
+    </div>
+
+    <!-- DANE DO QUIZU -->
+    <script>
+        const quizData = [
+            {
+                question: "Dlaczego ukrycie przycisku 'Usuń użytkownika' w kodzie React/Vue (np. warunkiem if(isAdmin)) nie jest zabezpieczeniem?",
+                options: [
+                    "Bo React jest wolny.",
+                    "Ponieważ to kontrola tylko na poziomie interfejsu (Frontend). Atakujący może pominąć przeglądarkę i wysłać żądanie HTTP usunięcia prosto do API (Backendu).",
+                    "Ponieważ React używa Virtual DOM.",
+                    "To jest w pełni bezpieczne, haker nie kliknie przycisku, którego nie widzi."
+                ],
+                correct: 1,
+                explanation: "Frontend to tylko nakładka wizualna, która ułatwia życie użytkownikowi. Bezpieczeństwo (AuthZ) zawsze MUSI być egzekwowane na serwerze (API)."
+            },
+            {
+                question: "Gdzie najbezpieczniej przechowywać token JWT w aplikacji SPA (Single Page Application)?",
+                options: [
+                    "W LocalStorage.",
+                    "W ciasteczku z flagą HttpOnly i Secure.",
+                    "W SessionStorage.",
+                    "W zmiennej URL."
+                ],
+                correct: 1,
+                explanation: "Ciasteczko HttpOnly chroni token przed atakami XSS (skrypt nie ma do niego dostępu). LocalStorage i SessionStorage są w pełni dostępne dla JavaScriptu."
+            },
+            {
+                type: "scenario",
+                question: "Jesteś w DevTools na stronie SPA. Zmieniasz w LocalStorage wartość 'isAdmin' z false na true. Nagle pojawia się zakładka 'Panel Administracyjny'. Co testujesz jako następne?",
+                options: [
+                    "Nic, zgłaszam krytyczny błąd.",
+                    "Klikam w funkcje panelu (np. 'Pobierz listę userów'). Jeśli API zwróci dane, to mamy krytyczny błąd na backendzie (Bypass AuthZ). Jeśli API zwróci 403, to błąd jest tylko wizualny.",
+                    "Próbuję zrobić SQL Injection.",
+                    "Restartuję komputer."
+                ],
+                correct: 1,
+                explanation: "Samo pokazanie panelu to nie podatność (to tylko UI). Prawdziwą podatnością jest moment, gdy backend ufa, że skoro widzisz ten panel, to masz do niego prawo."
+            },
+            {
+                question: "Co robi funkcja 'dangerouslySetInnerHTML' w React?",
+                options: [
+                    "Szyfruje kod HTML.",
+                    "Pozwala wstrzyknąć surowy kod HTML bezpośrednio do DOM, co może prowadzić do XSS, jeśli dane pochodzą od użytkownika.",
+                    "Przyspiesza ładowanie strony.",
+                    "Blokuje skrypty zewnętrzne."
+                ],
+                correct: 1,
+                explanation: "Nazwa 'dangerously' ma odstraszać. Jeśli przekażesz tam niezaufane dane (np. komentarz usera) bez sanityzacji, React wykona złośliwy kod."
+            },
+            {
+                question: "Co to są pliki 'Source Maps' (.js.map) często spotykane w SPA?",
+                options: [
+                    "Mapy lokalizacji użytkowników.",
+                    "Pliki konfiguracyjne bazy danych.",
+                    "Pliki, które łączą zminifikowany kod na produkcji z oryginalnym, czytelnym kodem źródłowym. Ich pozostawienie ułatwia pentesterom analizę aplikacji.",
+                    "Pliki z hasłami."
+                ],
+                correct: 2,
+                explanation: "Dzięki Source Maps możesz w zakładce 'Sources' (F12) zobaczyć piękne drzewo katalogów, nazwy funkcji i komentarze programistów, mimo że kod jest zminifikowany."
+            },
+            {
+                question: "Jaki wektor ataku XSS jest często pomijany w frameworkach JS (React/Vue)?",
+                options: [
+                    "SQL Injection.",
+                    "Wstrzykiwanie tagu <script> (framework to blokuje).",
+                    "Użycie 'javascript:...' jako wartości atrybutu href w linkach (np. w polu 'Moja strona WWW').",
+                    "Wgrywanie obrazków."
+                ],
+                correct: 2,
+                explanation: "Frameworki dobrze radzą sobie z uciekaniem tagów HTML. Ale link `javascript:alert(1)` jest dla nich zwykłym linkiem. Kliknięcie go wykonuje kod."
+            },
+            {
+                type: "scenario",
+                question: "Sklep internetowy napisany w Vue.js mnoży cenę produktu (100 zł) przez ilość (2) i wysyła do API żądanie zapłaty: POST /pay z polem {'total': 200}. Co robi haker?",
+                options: [
+                    "Zmienia kolor koszyka.",
+                    "Przechwytuje żądanie i zmienia 'total' na 1 (albo 0). Jeśli backend nie przeliczy tego sam na podstawie bazy, haker kupi towar za 1 zł.",
+                    "Kradnie ciasteczka.",
+                    "Wylogowuje się."
+                ],
+                correct: 1,
+                explanation: "To klasyczny Client-Side Logic Flaw. Ceny (i generalnie prawda o systemie) zawsze muszą leżeć na backendzie."
+            },
+            {
+                question: "Czy React.js jest całkowicie odporny na XSS?",
+                options: [
+                    "Tak, React w 100% eliminuje XSS.",
+                    "Nie. Domyślne renderowanie ucieka (escape) wartości, ale złe praktyki programistyczne (dangerouslySetInnerHTML, linki JS, błędy w refach) nadal pozwalają na XSS.",
+                    "Tak, pod warunkiem użycia HTTPS.",
+                    "Nie, React jest najbardziej podatnym frameworkiem."
+                ],
+                correct: 1,
+                explanation: "Framework robi za programistę 90% roboty. Te ostatnie 10% (nietypowe renderowanie, przestarzałe biblioteki) to miejsce, gdzie rodzą się błędy."
+            },
+            {
+                question: "Jak chronić tokeny JWT w localStorage przed XSS (jeśli programista upiera się przy tym rozwiązaniu)?",
+                options: [
+                    "Nie da się. Jeśli jest XSS, localStorage jest w pełni skompromitowane.",
+                    "Można je zaszyfrować hasłem.",
+                    "Można użyć bazy IndexedDB.",
+                    "Można zmienić nazwę tokena na inną."
+                ],
+                correct: 0,
+                explanation: "To gra o sumie zerowej. Jeśli złośliwy kod JS działa w kontekście strony, ma takie same prawa do localStorage jak kod aplikacji. Game over."
+            },
+            {
+                question: "Czym jest 'Frontend Routing'?",
+                options: [
+                    "Przekierowaniem DNS.",
+                    "Techniką w SPA, gdzie zmiana URL (np. /profile) nie wysyła żądania po nową stronę HTML do serwera, lecz wymienia komponenty na ekranie za pomocą JavaScriptu.",
+                    "Wysyłaniem danych do routera Wi-Fi.",
+                    "Blokowaniem portów."
+                ],
+                correct: 1,
+                explanation: "To ważny koncept. Skoro 'strony' (komponenty) nie są pobierane z serwera, to backend nie ma pojęcia, na jakiej 'podstronie' jest użytkownik. Backend widzi tylko wywołania API."
+            }
+        ];
+    </script>
+
+    <script src="quiz.js"></script>
+
+</body>
+
+</html>

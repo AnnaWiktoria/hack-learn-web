@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Egzamin: Moduł 4 - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: PHANTOM VOID (Deep Indigo & Cyan) */
+        :root {
+            --accent: #7c4dff; /* Deep Indigo */
+            --accent-glow: rgba(124, 77, 255, 0.5);
+            --success: #00e5ff; /* Cyan highlight */
+            --danger: #ff0055;
+        }
+        
+        body {
+            /* Tło "Deep Space Logic" */
+            background-color: #050010;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(124, 77, 255, 0.1) 0%, transparent 50%),
+                linear-gradient(0deg, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 50px 50px, 50px 50px;
+        }
+
+        .boss-header {
+            border: 2px solid var(--accent);
+            padding: 30px;
+            text-align: center;
+            background: rgba(20, 0, 50, 0.8);
+            margin-bottom: 40px;
+            box-shadow: 0 0 40px var(--accent-glow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .boss-title {
+            font-size: 3rem;
+            color: #fff;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 8px;
+            margin: 0;
+            text-shadow: 0 0 20px var(--accent);
+        }
+        
+        .boss-subtitle {
+            color: var(--accent);
+            margin-top: 15px; 
+            font-family: var(--font-mono);
+            font-weight: bold;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div class="boss-header">
+        <h1 class="boss-title">EGZAMIN KOŃCOWY</h1>
+        <p class="boss-subtitle">/// POZIOM 4: LOGIC & STRATEGY ///</p>
+    </div>
+
+    <section>
+        <h2>> STATUS MISJI</h2>
+        <p>Test wiedzy z lekcji 17-18. Tematyka: Błędy logiki biznesowej, Race Conditions oraz zaawansowane ataki na infrastrukturę (Smuggling).</p>
+        <div class="card" style="border-color: var(--accent);">
+            <h3>ZASADY GRY</h3>
+            <ul>
+                <li><strong>Liczba pytań:</strong> 15</li>
+                <li><strong>Wymagany wynik:</strong> 80% (12/15)</li>
+                <li><strong>Zakres:</strong> Logic Flaws, TOCTOU, Turbo Intruder, CL.TE / TE.CL.</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>⚔️ ROZPOCZNIJ WALKĘ</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | EXAM 04</p>
+    </footer>
+</div>
+
+<!-- DANE DO EGZAMINU -->
+<script>
+    const quizData = [
+        // --- BUSINESS LOGIC (L17) ---
+        {
+            question: "Dlaczego skanery automatyczne (np. Burp Scanner) zazwyczaj nie wykrywają błędów logiki biznesowej?",
+            options: [
+                "Ponieważ skanery nie potrafią się zalogować.",
+                "Ponieważ błędy logiczne nie generują błędów składni ani kodów 500. Aplikacja działa technicznie poprawnie, ale robi rzeczy, których biznesowo nie powinna (np. sprzedaje towar za 0 zł).",
+                "Ponieważ logika jest ukryta w bazie danych.",
+                "Skanery wykrywają je doskonale."
+            ],
+            correct: 1,
+            explanation: "To domena człowieka. Skaner widzi 'Zakup udany' (Status 200) i myśli, że jest OK. Pentester widzi 'Zakup udany za -50 PLN' i wie, że to błąd."
+        },
+        {
+            type: "scenario",
+            question: "Sklep internetowy pozwala dodać produkt do koszyka. Zmieniasz ilość produktu na `-1`. Suma zamówienia spada. Finalizujesz zakup. Co to za błąd?",
+            options: [
+                "SQL Injection.",
+                "Business Logic Flaw (Lack of Input Validation).",
+                "XSS.",
+                "Race Condition."
+            ],
+            correct: 1,
+            explanation: "Programista założył, że ilość zawsze jest dodatnia. Brak walidacji liczb ujemnych pozwala na manipulację saldem."
+        },
+        {
+            type: "scenario",
+            question: "Proces zakupu ma 3 kroki: /koszyk -> /platnosc -> /sukces. Wchodzisz od razu na `/sukces?order_id=123`, pomijając płatność. System generuje fakturę. Jak nazywa się ten błąd?",
+            options: [
+                "Workflow Bypass (Ominięcie przepływu pracy).",
+                "Path Traversal.",
+                "CSRF.",
+                "Brute Force."
+            ],
+            correct: 0,
+            explanation: "Aplikacja nie weryfikuje na ostatnim etapie, czy poprzednie kroki (płatność) zostały poprawnie zakończone."
+        },
+        {
+            question: "Dlaczego walidacja danych (np. ceny) po stronie klienta (JavaScript) jest uznawana za krytyczny błąd?",
+            options: [
+                "Bo spowalnia przeglądarkę.",
+                "Bo JS nie umie liczyć pieniędzy.",
+                "Ponieważ klient jest niezaufany. Atakujący może użyć Proxy (Burp), aby wysłać do serwera dowolną cenę, ignorując kod JavaScript.",
+                "Bo nie działa na telefonach."
+            ],
+            correct: 2,
+            explanation: "Złota zasada: 'Never Trust the Client'. Wszelkie kluczowe decyzje i obliczenia muszą odbywać się na backendzie."
+        },
+
+        // --- RACE CONDITIONS (L17) ---
+        {
+            question: "Co oznacza skrót TOCTOU?",
+            options: [
+                "Time-Out-Connection-Time-Out-User",
+                "Time-Of-Check to Time-Of-Use",
+                "The Only Correct Time Of Use",
+                "Transfer Of Control To Other User"
+            ],
+            correct: 1,
+            explanation: "To techniczna definicja wyścigu. Okno czasowe między sprawdzeniem warunku (np. 'czy masz kupon?') a wykonaniem akcji (np. 'zużyj kupon')."
+        },
+        {
+            type: "scenario",
+            question: "Masz kupon jednorazowy. Używając narzędzia Turbo Intruder, wysyłasz 20 żądań w tej samej milisekundzie. System nalicza zniżkę 5 razy. Dlaczego?",
+            options: [
+                "System jest hojny.",
+                "Wystąpił Race Condition. Wątki serwera przetwarzały żądania równolegle i sprawdziły ważność kuponu ZANIM baza danych zdążyła zapisać informację, że został on już użyty.",
+                "Haker złamał hasło bazy danych.",
+                "To błąd frontendu."
+            ],
+            correct: 1,
+            explanation: "Brak atomowości transakcji lub blokowania wierszy w bazie danych powoduje, że wiele wątków 'wchodzi' do sekcji krytycznej jednocześnie."
+        },
+        {
+            question: "Jaki mechanizm bazodanowy najskuteczniej zapobiega Race Conditions?",
+            options: [
+                "Indeksy.",
+                "Mechanizm blokowania wierszy (Row Locking, np. SELECT FOR UPDATE) i transakcje ACID.",
+                "Replikacja bazy.",
+                "Robienie backupów."
+            ],
+            correct: 1,
+            explanation: "Blokada (Lock) sprawia, że jeśli jeden wątek przetwarza dany rekord (np. kupon), inne wątki muszą czekać w kolejce i nie mogą go odczytać/zapisać."
+        },
+        {
+            question: "Do czego służy wtyczka Turbo Intruder w Burp Suite?",
+            options: [
+                "Do łamania haseł WiFi.",
+                "Do wysyłania dużej liczby żądań HTTP w ekstremalnie krótkim czasie (minimalizując opóźnienia sieciowe), co jest kluczowe przy testowaniu Race Conditions.",
+                "Do skanowania portów.",
+                "Do dekodowania Base64."
+            ],
+            correct: 1,
+            explanation: "Zwykły Intruder jest za wolny na wyścigi. Turbo Intruder używa własnego stosu HTTP, aby wypchnąć żądania niemal jednocześnie."
+        },
+
+        // --- HTTP REQUEST SMUGGLING (L18) ---
+        {
+            question: "Co jest główną przyczyną ataku HTTP Request Smuggling?",
+            options: [
+                "Słabe hasła administratorów.",
+                "Desynchronizacja między Frontendem (Load Balancer) a Backendem w interpretacji długości żądania HTTP.",
+                "Brak szyfrowania SSL.",
+                "Błędy w kodzie JavaScript."
+            ],
+            correct: 1,
+            explanation: "Jeden serwer myśli, że wiadomość się skończyła, a drugi, że trwa dalej. To pozwala 'przemycić' fragment żądania, który zostanie doklejony do następnego."
+        },
+        {
+            question: "Jakie dwa nagłówki HTTP są skonfliktowane w ataku Smuggling?",
+            options: [
+                "Host i Referer",
+                "Content-Length (CL) i Transfer-Encoding (TE)",
+                "Cookie i Authorization",
+                "Accept i Content-Type"
+            ],
+            correct: 1,
+            explanation: "CL określa długość w bajtach. TE (chunked) określa koniec za pomocą bloku '0'. Jeśli serwery używają różnych metod do jednej wiadomości - mamy problem."
+        },
+        {
+            question: "Co oznacza scenariusz CL.TE?",
+            options: [
+                "Frontend używa Content-Length, Backend używa Transfer-Encoding.",
+                "Frontend używa Transfer-Encoding, Backend używa Content-Length.",
+                "Oba serwery używają Content-Length.",
+                "Clear Text . Text Encoding"
+            ],
+            correct: 0,
+            explanation: "Pierwsza część skrótu (CL) dotyczy pierwszego serwera (Frontend), druga (TE) dotyczy drugiego (Backend)."
+        },
+        {
+            question: "Co oznacza `Transfer-Encoding: chunked`?",
+            options: [
+                "Dane są skompresowane.",
+                "Dane są wysyłane w kawałkach (chunks), a koniec wiadomości jest oznaczony kawałkiem o rozmiarze 0.",
+                "Dane są zakodowane w Base64.",
+                "To błąd serwera."
+            ],
+            correct: 1,
+            explanation: "To standard HTTP/1.1. Serwer czyta bajty aż napotka '0\r\n\r\n'."
+        },
+        {
+            type: "scenario",
+            question: "Jaki jest najbardziej krytyczny skutek ataku Request Smuggling (tzw. Request Hijacking)?",
+            options: [
+                "Serwer działa wolniej.",
+                "Możliwość przechwycenia żądań INNYCH użytkowników (w tym ich ciasteczek sesyjnych i haseł), które zostają doklejone do żądania atakującego.",
+                "Wyciek wersji serwera.",
+                "Zmiana koloru strony."
+            ],
+            correct: 1,
+            explanation: "Haker 'zatruwa' kolejkę (socket). Gdy ofiara wysyła swoje żądanie, wpada ono prosto w pułapkę zastawioną przez przemycone żądanie hakera."
+        },
+        {
+            question: "Dlaczego protokół HTTP/2 jest bezpieczniejszy pod kątem Smugglingu?",
+            options: [
+                "Bo jest nowszy.",
+                "Bo używa precyzyjnego, binarnego mechanizmu ramek z wbudowaną długością, co eliminuje niejednoznaczność CL vs TE.",
+                "Bo szyfruje nagłówki.",
+                "Bo nie używa TCP."
+            ],
+            correct: 1,
+            explanation: "W HTTP/2 nie ma miejsca na interpretację 'gdzie kończy się wiadomość'. Długość jest zapisana sztywno w ramce binarnej."
+        },
+        {
+            question: "Jakie narzędzie w Burp Suite służy do automatycznego wykrywania Request Smuggling?",
+            options: [
+                "SQLMap",
+                "HTTP Request Smuggler (BApp)",
+                "Dirbuster",
+                "Decoder"
+            ],
+            correct: 1,
+            explanation: "Wykrywanie desynchronizacji ręcznie jest niezwykle trudne i podatne na błędy (false negatives). Wtyczka od PortSwigger robi to, mierząc różnice w czasie odpowiedzi."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

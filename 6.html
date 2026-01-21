@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 06: AuthN vs AuthZ - Kurs Pentestera</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Neon Blue (Identity & Access) */
+        :root {
+            --accent: #2979ff;
+            --accent-glow: rgba(41, 121, 255, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>AuthN vs AuthZ</h1>
+            <p>MODUŁ 06: Uwierzytelnianie, Autoryzacja i Kontrola Dostępu</p>
+        </header>
+
+        <!-- 1. DEFINICJE -->
+        <section>
+            <h2>> RÓŻNICA, KTÓRĄ MUSISZ ZNAĆ</h2>
+            <p>Wiele osób używa skrótu "Auth" wymiennie, ale dla pentestera to dwa różne światy z różnymi podatnościami.
+            </p>
+
+            <div class="card">
+                <h3>1. AUTHENTICATION (AuthN) - Uwierzytelnianie</h3>
+                <p><strong>Pytanie:</strong> "Kim jesteś?"</p>
+                <p>Proces weryfikacji tożsamości (Logowanie). Sprawdzamy, czy Jan Kowalski to faktycznie Jan Kowalski.
+                </p>
+                <ul>
+                    <li><strong>Metody:</strong> Hasło, 2FA, Biometria, Token JWT.</li>
+                    <li><strong>Ataki:</strong> Brute-force, Credential Stuffing, Phishing, Session Hijacking.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>2. AUTHORIZATION (AuthZ) - Autoryzacja</h3>
+                <p><strong>Pytanie:</strong> "Co wolno Ci zrobić?"</p>
+                <p>Dzieje się PO zalogowaniu. Sprawdzamy, czy Jan Kowalski ma prawo wejść do panelu admina.</p>
+                <ul>
+                    <li><strong>Metody:</strong> Role (Admin/User), ACL (Listy kontroli dostępu), Uprawnienia plików.
+                    </li>
+                    <li><strong>Ataki:</strong> IDOR, Privilege Escalation (Pionowe/Poziome).</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 2. Broken Access Control -->
+        <section>
+            <h2>> BROKEN ACCESS CONTROL (BAC)</h2>
+            <p>To nr 1 na liście OWASP Top 10. Programiści często sprawdzają "czy jesteś zalogowany", ale zapominają
+                sprawdzić "czy masz prawo do tego konkretnego zasobu".</p>
+
+            <div class="card">
+                <h3>RODZAJE ESKALACJI UPRAWNIEŃ</h3>
+                <table>
+                    <tr>
+                        <th>Typ</th>
+                        <th>Opis</th>
+                        <th>Przykład</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Pionowa (Vertical)</strong></td>
+                        <td>Zwykły użytkownik uzyskuje dostęp do funkcji Administratora.</td>
+                        <td>User zmienia w URL <code>/user/settings</code> na <code>/admin/settings</code> i wchodzi bez
+                            błędu 403.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Pozioma (Horizontal)</strong></td>
+                        <td>Użytkownik uzyskuje dostęp do danych INNEGO użytkownika o tych samych uprawnieniach.</td>
+                        <td>Słynny <strong>IDOR</strong>. Jan wchodzi na fakturę Marka, zmieniając ID w URL:
+                            <code>/invoice/100</code> -> <code>/invoice/101</code>.
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </section>
+
+        <!-- 3. SCENARIUSZE -->
+        <section>
+            <h2>> SCENARIUSZE PENTESTERA</h2>
+
+            <div class="card">
+                <h3>SCENARIUSZ 1: Brak Rate Limit (AuthN)</h3>
+                <p>Logowanie nie ma blokady po nieudanych próbach.</p>
+                <p><strong>Atak:</strong> Uruchamiasz Hydrę lub Burp Intruder i sprawdzasz 10,000 haseł dla konta
+                    "admin". W końcu trafiasz.</p>
+            </div>
+
+            <div class="card">
+                <h3>SCENARIUSZ 2: IDOR (AuthZ)</h3>
+                <p>Aplikacja używa przewidywalnych ID: <code>GET /api/messages/1055</code>.</p>
+                <p><strong>Atak:</strong> Piszesz skrypt w Pythonie/Burpie, który iteruje od 1 do 10000 i pobiera
+                    wiadomości wszystkich użytkowników serwisu. To zazwyczaj błąd o randze
+                    <strong>HIGH/CRITICAL</strong>.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>SCENARIUSZ 3: Parameter Tampering</h3>
+                <p>Podczas rejestracji wysyłane jest żądanie:</p>
+                <pre><code>POST /register
+{
+  "username": "hacker",
+  "password": "123",
+  "role": "user"   <-- A co jeśli zmienisz to na "admin"?
+}</code></pre>
+                <p>Często backend bezmyślnie przyjmuje ten parametr (Mass Assignment vulnerability).</p>
+            </div>
+        </section>
+
+        <!-- CHECKLIST -->
+        <section>
+            <h2>CHECKLISTA / RED FLAGS</h2>
+            <div class="card checklist-card">
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Kolejne numery ID (Sequential IDs):</strong> Zaproszenie do IDOR. Powinno się używać
+                        UUID (losowych ciągów).</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Brak 2FA na koncie admina:</strong> W dzisiejszych czasach to słaba konfiguracja (choć
+                        nie zawsze "podatność").</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Client-Side Validation:</strong> Ukrycie przycisku "Admin Panel" w HTML to nie
+                        zabezpieczenie. Haker i tak wejdzie na URL bezpośrednio.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QUIZ -->
+        <section id="quiz-section">
+            <h2>🎓 WERYFIKACJA WIEDZY</h2>
+            <div id="quiz-container"></div>
+        </section>
+
+        <footer>
+            <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Kurs Pentestera | Moduł 06</p>
+        </footer>
+    </div>
+
+    <!-- DANE DO QUIZU -->
+    <script>
+        const quizData = [
+            {
+                question: "Jaka jest różnica między Authentication (AuthN) a Authorization (AuthZ)?",
+                options: [
+                    "AuthN to szyfrowanie, AuthZ to hashowanie.",
+                    "AuthN sprawdza 'Kim jesteś' (logowanie), AuthZ sprawdza 'Co wolno Ci zrobić' (uprawnienia).",
+                    "AuthN dotyczy admina, AuthZ dotyczy usera.",
+                    "Nie ma różnicy, to synonimy."
+                ],
+                correct: 1,
+                explanation: "Zapamiętaj: N = Name (Kim jesteś?), Z = Zezwolenie (Co możesz?). Najpierw wchodzisz do budynku (AuthN), potem próbujesz wejść do gabinetu szefa (AuthZ)."
+            },
+            {
+                question: "Co to jest IDOR (Insecure Direct Object Reference)?",
+                options: [
+                    "Błąd, gdzie aplikacja pozwala na dostęp do obiektu (np. pliku, faktury) na podstawie ID w URL, bez sprawdzenia czy użytkownik jest właścicielem tego obiektu.",
+                    "Rodzaj ataku DDoS.",
+                    "Błąd w bazie danych SQL.",
+                    "Niebezpieczne przekierowanie."
+                ],
+                correct: 0,
+                explanation: "IDOR to klasyczny przykład Broken Access Control. Serwer ufa, że skoro znasz numer ID faktury, to masz do niej prawo. Błąd polega na braku weryfikacji właściciela po stronie backendu."
+            },
+            {
+                question: "Czym jest 'Credential Stuffing'?",
+                options: [
+                    "Wpychaniem wirusa do pliku PDF.",
+                    "Atakiem polegającym na użyciu loginów i haseł wyciekłych z innej strony (np. LinkedIn) do zalogowania się na Twojej stronie.",
+                    "Zgadywaniem hasła metodą słownikową.",
+                    "Kradzieżą ciasteczek."
+                ],
+                correct: 1,
+                explanation: "Ludzie używają tych samych haseł wszędzie. Hakerzy biorą bazy z wycieków i automatycznie sprawdzają te pary login:hasło na Netflixie, Uberze, Facebooku itd."
+            },
+            {
+                type: "scenario",
+                question: "Jesteś zalogowany jako 'user'. Zmieniasz w ciasteczku parametr 'role=user' na 'role=admin'. Po odświeżeniu widzisz panel administratora. Jaki to typ ataku?",
+                options: [
+                    "SQL Injection.",
+                    "Privilege Escalation (Pionowe podniesienie uprawnień).",
+                    "Cross-Site Scripting (XSS).",
+                    "Brute Force."
+                ],
+                correct: 1,
+                explanation: "Udało Ci się wskoczyć z niższego poziomu (user) na wyższy (admin). To klasyczna eskalacja pionowa wynikająca z ufania danym od klienta."
+            },
+            {
+                type: "scenario",
+                question: "AUDYT RYZYKA: Odkrywasz, że zmieniając ID w URL (/user/100 -> /user/101) możesz pobrać pełne dane osobowe (PESEL, adres, telefon) każdego użytkownika serwisu. Co zgłaszasz klientowi i z jakim priorytetem (Severity)?",
+                options: [
+                    "Information Disclosure - Low (Niska), bo to tylko dane tekstowe.",
+                    "Broken Authentication - Medium (Średnia), bo system źle loguje.",
+                    "Broken Access Control (IDOR) - Critical/High (Krytyczna/Wysoka), ponieważ dochodzi do masowego wycieku danych wrażliwych (PII).",
+                    "Zgłaszam jako funkcjonalność (Works as intended)."
+                ],
+                correct: 2,
+                explanation: "To jest pytanie rekrutacyjne! Wyciek danych osobowych (PII) to zazwyczaj High lub Critical (RODO/GDPR). Biznesowo to katastrofa dla firmy."
+            },
+            {
+                question: "Dlaczego stosowanie UUID (np. 550e8400-e29b...) jest bezpieczniejsze niż ID sekwencyjnych (1, 2, 3...)?",
+                options: [
+                    "UUID szybciej działa w bazie danych.",
+                    "UUID uniemożliwia proste zgadywanie (iterowanie) identyfikatorów innych użytkowników, co utrudnia ataki IDOR.",
+                    "UUID jest zaszyfrowane.",
+                    "UUID zajmuje mniej miejsca."
+                ],
+                correct: 1,
+                explanation: "Sekwencyjne ID (1, 2, 3) pozwalają hakerowi łatwo sprawdzić wszystkich użytkowników pętlą 'for'. UUID jest losowe i praktycznie niemożliwe do zgadnięcia."
+            },
+            {
+                question: "Co to jest 'Horizontal Privilege Escalation' (Pozioma eskalacja)?",
+                options: [
+                    "Uzyskanie dostępu do konta administratora.",
+                    "Przejęcie konta innego użytkownika o TYCH SAMYCH uprawnieniach (np. Marek wchodzi na konto Ani).",
+                    "Atak na serwer w tej samej sieci Wi-Fi.",
+                    "Zwiększenie limitu transferu danych."
+                ],
+                correct: 1,
+                explanation: "Pozioma = poruszasz się w bok, na tym samym szczeblu drabiny uprawnień, ale wchodzisz do cudzego pokoju."
+            },
+            {
+                type: "scenario",
+                question: "Widzisz formularz logowania, który po 3 błędnych próbach nie blokuje konta ani nie wprowadza opóźnienia (CAPTCHA/Rate Limit). Na jaki atak jest podatny?",
+                options: [
+                    "SQL Injection.",
+                    "Brute-Force / Password Spraying.",
+                    "XSS.",
+                    "Man-in-the-Middle."
+                ],
+                correct: 1,
+                explanation: "Brak Rate Limitngu pozwala atakującemu sprawdzać tysiące haseł na minutę. To błąd konfiguracyjny mechanizmu AuthN."
+            },
+            {
+                question: "Czy ukrycie przycisku 'Panel Admina' w CSS (display: none) to skuteczna autoryzacja?",
+                options: [
+                    "Tak, użytkownik go nie widzi, więc nie kliknie.",
+                    "Nie. To 'Security by Obscurity'. Atakujący może podejrzeć kod źródłowy, znaleźć link i wejść na niego bezpośrednio.",
+                    "Tak, ale tylko w przeglądarce Chrome.",
+                    "Zależy od frameworka."
+                ],
+                correct: 1,
+                explanation: "Kontrola dostępu (AuthZ) MUSI odbywać się na serwerze (backendzie). Frontend służy tylko do wyświetlania. Hakerzy nie używają przycisków, używają żądań HTTP."
+            },
+            {
+                type: "scenario",
+                question: "AUDYT RYZYKA: Znajdujesz panel admina dostępny pod /admin bez logowania (ktokolwiek wejdzie, jest adminem). Jakie Severity?",
+                options: [
+                    "Low",
+                    "Medium",
+                    "Critical",
+                    "Info"
+                ],
+                correct: 2,
+                explanation: "To Authentication Bypass. Całkowite przejęcie kontroli nad systemem bez żadnego wysiłku. Definicja Critical."
+            }
+        ];
+    </script>
+
+    <script src="quiz.js"></script>
+
+</body>
+
+</html>

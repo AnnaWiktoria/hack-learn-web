@@ -1,0 +1,576 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;700&display=swap");
+
+:root {
+	/* --- PALETA KOLORÓW --- */
+	--bg-dark: #0a0a0a;
+	--bg-panel: #111111;
+	--bg-code: #050505;
+
+	--text-main: #e0e0e0;
+	--text-muted: #888888;
+
+	--accent: #00f3ff;
+	--accent-glow: rgba(0, 243, 255, 0.3);
+
+	--success: #00ff9d;
+	--warning: #f7b731;
+	--danger: #ff0055;
+
+	--s-2xx: #00ff9d;
+	--s-3xx: #2d98da;
+	--s-4xx: #f7b731;
+	--s-5xx: #ff0055;
+
+	--font-ui: "Inter", sans-serif;
+	--font-mono: "JetBrains Mono", monospace;
+
+	--border-radius: 4px;
+	--border-color: #333;
+}
+
+body {
+	background-color: var(--bg-dark);
+	color: var(--text-main);
+	font-family: var(--font-ui);
+	line-height: 1.6;
+	margin: 0;
+	padding: 0;
+	background-image:
+		linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+	background-size: 40px 40px;
+}
+
+.container {
+	max-width: 900px;
+	margin: 0 auto;
+	padding: 40px 20px;
+}
+
+/* HEADER */
+header {
+	text-align: center;
+	margin-bottom: 60px;
+	position: relative;
+}
+header h1 {
+	font-family: var(--font-mono);
+	color: var(--accent);
+	font-size: 2.5rem;
+	margin: 0;
+	text-transform: uppercase;
+	letter-spacing: -1px;
+	text-shadow: 0 0 15px var(--accent-glow);
+}
+header p {
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	margin-top: 10px;
+	font-size: 0.9rem;
+}
+header::after {
+	content: "";
+	display: block;
+	width: 100px;
+	height: 3px;
+	background: var(--accent);
+	margin: 20px auto 0;
+	box-shadow: 0 0 10px var(--accent);
+}
+
+/* TYPOGRAFIA */
+h2 {
+	color: #fff;
+	font-family: var(--font-mono);
+	border-left: 3px solid var(--accent);
+	padding-left: 15px;
+	margin-top: 50px;
+	margin-bottom: 20px;
+	font-size: 1.5rem;
+	display: flex;
+	align-items: center;
+}
+h2::before {
+	content: "> ";
+	color: var(--accent);
+	margin-right: 10px;
+	opacity: 0.5;
+}
+h3 {
+	color: var(--text-main);
+	font-weight: 600;
+	margin-top: 0;
+	margin-bottom: 15px;
+}
+
+/* KARTY */
+.card {
+	background-color: var(--bg-panel);
+	border: 1px solid var(--border-color);
+	border-radius: var(--border-radius);
+	padding: 25px;
+	margin-bottom: 25px;
+	position: relative;
+	overflow: hidden;
+	transition:
+		border-color 0.2s,
+		box-shadow 0.2s; /* Usunięto transform */
+}
+.card:hover {
+	border-color: var(--accent);
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+.card::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 2px;
+	background: linear-gradient(90deg, transparent, var(--accent), transparent);
+	opacity: 0.5;
+}
+
+/* KOD */
+pre {
+	background-color: var(--bg-code);
+	border: 1px solid #333;
+	border-radius: 6px;
+	margin: 20px 0;
+	padding: 0;
+	box-shadow: inset 0 0 20px #000;
+	overflow: hidden;
+}
+pre::before {
+	content: "● ● ● bash";
+	display: block;
+	background: #1a1a1a;
+	color: #555;
+	font-family: var(--font-ui);
+	font-size: 0.75rem;
+	padding: 5px 15px;
+	border-bottom: 1px solid #333;
+	letter-spacing: 2px;
+}
+code {
+	display: block;
+	padding: 15px;
+	font-family: var(--font-mono);
+	color: #e0e0e0;
+	font-size: 0.9rem;
+	overflow-x: auto;
+}
+.highlight {
+	color: var(--accent);
+	font-weight: bold;
+}
+.param {
+	color: var(--warning);
+}
+.secure {
+	color: var(--success);
+}
+.comment {
+	color: #666;
+	font-style: italic;
+}
+
+/* TABELE I BADGE */
+table {
+	width: 100%;
+	border-collapse: separate;
+	border-spacing: 0;
+	margin: 20px 0;
+	border: 1px solid #333;
+	border-radius: var(--border-radius);
+	overflow: hidden;
+}
+th {
+	background-color: #1a1a1a;
+	color: var(--accent);
+	font-family: var(--font-mono);
+	text-transform: uppercase;
+	font-size: 0.85rem;
+	padding: 15px;
+	border-bottom: 1px solid #333;
+	text-align: left;
+}
+td {
+	padding: 15px;
+	border-bottom: 1px solid #222;
+	background-color: var(--bg-panel);
+}
+tr:last-child td {
+	border-bottom: none;
+}
+tr:hover td {
+	background-color: #1f1f1f;
+}
+
+.method-badge,
+.status-badge {
+	display: inline-block;
+	padding: 4px 10px;
+	border-radius: 2px;
+	font-family: var(--font-mono);
+	font-weight: bold;
+	font-size: 0.8rem;
+	letter-spacing: 0.5px;
+	margin-right: 8px;
+	text-transform: uppercase;
+	color: #000;
+}
+.m-get {
+	background-color: var(--success);
+	box-shadow: 0 0 10px rgba(0, 255, 157, 0.2);
+}
+.m-post {
+	background-color: var(--warning);
+	box-shadow: 0 0 10px rgba(247, 183, 49, 0.2);
+}
+.m-put {
+	background-color: #29b6f6;
+}
+.m-patch {
+	background-color: #ab47bc;
+	color: white;
+}
+.m-delete {
+	background-color: var(--danger);
+	color: white;
+	box-shadow: 0 0 10px rgba(255, 0, 85, 0.2);
+}
+.m-options {
+	background-color: #78909c;
+}
+
+.s-2xx {
+	color: var(--success);
+	background: rgba(0, 255, 157, 0.1);
+	border: 1px solid var(--success);
+}
+.s-3xx {
+	color: var(--s-3xx);
+	background: rgba(45, 152, 218, 0.1);
+	border: 1px solid var(--s-3xx);
+}
+.s-4xx {
+	color: var(--s-4xx);
+	background: rgba(247, 183, 49, 0.1);
+	border: 1px solid var(--s-4xx);
+}
+.s-5xx {
+	color: var(--danger);
+	background: rgba(255, 0, 85, 0.1);
+	border: 1px solid var(--danger);
+}
+
+/* CHECKLIST */
+.checklist-card {
+	background-color: rgba(255, 0, 85, 0.03);
+	border: 1px solid var(--danger);
+}
+.checklist-item {
+	display: flex;
+	align-items: start;
+	margin-bottom: 12px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid rgba(255, 0, 85, 0.1);
+}
+.checklist-item:last-child {
+	border-bottom: none;
+	margin-bottom: 0;
+}
+.check-icon {
+	color: var(--danger);
+	margin-right: 15px;
+	font-size: 1.2rem;
+}
+
+/* QUIZ */
+#quiz-section {
+	margin-top: 80px;
+	border-top: 1px solid #333;
+	padding-top: 40px;
+}
+#quiz-section h2 {
+	color: var(--success);
+	border-color: var(--success);
+}
+#quiz-section h2::before {
+	color: var(--success);
+}
+
+.question-card {
+	background-color: #0f0f0f;
+	border: 1px solid #333;
+	padding: 30px;
+	margin-bottom: 20px;
+}
+.scenario-badge {
+	background-color: var(--accent);
+	color: #000;
+	padding: 2px 8px;
+	border-radius: 2px;
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	font-weight: bold;
+	letter-spacing: 1px;
+}
+
+.option-btn {
+	background-color: #1a1a1a;
+	border: 1px solid #444;
+	color: var(--text-muted);
+	padding: 18px;
+	margin-top: 10px;
+	border-radius: var(--border-radius);
+	cursor: pointer;
+	transition: all 0.2s ease;
+	font-family: var(--font-ui);
+}
+.option-btn:hover {
+	background-color: #222;
+	border-color: var(--text-main);
+	color: var(--text-main);
+	/* Usunięto transform */
+}
+.option-btn.correct {
+	background-color: rgba(0, 255, 157, 0.1);
+	border-color: var(--success);
+	color: var(--success);
+	font-weight: bold;
+}
+.option-btn.wrong {
+	background-color: rgba(255, 0, 85, 0.1);
+	border-color: var(--danger);
+	color: var(--danger);
+	opacity: 0.7;
+}
+
+.explanation {
+	margin-top: 20px;
+	padding: 15px;
+	background: rgba(0, 243, 255, 0.05);
+	border-left: 3px solid var(--accent);
+	color: #d1d1d1;
+	font-size: 0.95rem;
+	display: none;
+}
+
+/* WYNIKI QUIZU */
+.quiz-result-container {
+	text-align: center;
+	background: #0f0f0f;
+	padding: 40px;
+	border: 1px solid #333;
+	border-radius: 8px;
+	animation: fadeIn 0.5s;
+}
+.result-score {
+	font-size: 3rem;
+	font-family: var(--font-mono);
+	margin: 20px 0;
+}
+.result-score.pass {
+	color: var(--success);
+	text-shadow: 0 0 20px rgba(0, 255, 157, 0.5);
+}
+.result-score.fail {
+	color: var(--danger);
+	text-shadow: 0 0 20px rgba(255, 0, 85, 0.5);
+}
+
+.result-msg {
+	font-size: 1.2rem;
+	margin-bottom: 30px;
+}
+
+/* PRZYCISKI */
+.btn {
+	display: inline-block;
+	padding: 15px 30px;
+	border-radius: 2px;
+	font-family: var(--font-mono);
+	font-weight: bold;
+	text-transform: uppercase;
+	cursor: pointer;
+	text-decoration: none;
+	border: none;
+	font-size: 1rem;
+	letter-spacing: 1px;
+	transition: all 0.3s;
+}
+.btn-primary {
+	background-color: var(--accent);
+	color: #000;
+	box-shadow: 0 0 15px var(--accent-glow);
+}
+.btn-primary:hover {
+	background-color: #fff;
+	box-shadow: 0 0 25px var(--accent-glow);
+}
+.btn-danger {
+	background-color: transparent;
+	border: 1px solid var(--danger);
+	color: var(--danger);
+}
+.btn-danger:hover {
+	background-color: var(--danger);
+	color: #fff;
+	box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
+}
+
+.home-link {
+	display: inline-block;
+	margin-top: 20px;
+	color: var(--text-muted);
+	text-decoration: none;
+	font-size: 0.9rem;
+}
+.home-link:hover {
+	color: var(--accent);
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* --- NAWIGACJA MIĘDZY LEKCJAMI --- */
+.lesson-nav {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 40px;
+	margin-bottom: 20px;
+	border-top: 1px solid #333;
+	padding-top: 20px;
+}
+
+.nav-btn {
+	text-decoration: none;
+	color: var(--text-main);
+	background: #1a1a1a;
+	border: 1px solid #333;
+	padding: 10px 20px;
+	border-radius: 4px;
+	font-family: var(--font-mono);
+	font-size: 0.9rem;
+	transition: all 0.3s;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.nav-btn:hover {
+	border-color: var(--accent);
+	color: var(--accent);
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.nav-btn.home {
+	border-color: #555;
+}
+.nav-btn.home:hover {
+	background: #333;
+	color: #fff;
+	border-color: #fff;
+}
+
+/* Ukrywanie przycisków na pierwszej i ostatniej lekcji jeśli trzeba */
+.nav-btn.hidden {
+	visibility: hidden;
+}
+
+/* --- STYL DLA UKOŃCZONYCH MISJI --- */
+/* (Klasa .completed jest dodawana automatycznie przez JS) */
+
+.mission-item.completed {
+	border-color: #00ff00; /* Zmienia ramkę na zieloną */
+	background: rgba(0, 255, 0, 0.05); /* Dodaje delikatne zielone tło */
+}
+
+/* Zmiana koloru numerka [01] na zielony neon */
+.mission-item.completed .mission-id {
+	color: #00ff00;
+	text-shadow: 0 0 5px #00ff00;
+	opacity: 1;
+}
+
+/* Zapalenie "diody" po prawej stronie */
+.mission-item.completed .status-dot {
+	background-color: #00ff00;
+	box-shadow: 0 0 10px #00ff00; /* Efekt świecenia */
+}
+
+/* --- STYL DLA UKOŃCZONYCH MISJI --- */
+/* (Klasa .completed jest dodawana automatycznie przez JS) */
+
+.mission-item.completed {
+	border-color: #00ff00; /* Zmienia ramkę na zieloną */
+	background: rgba(0, 255, 0, 0.05); /* Dodaje delikatne zielone tło */
+}
+
+/* Zmiana koloru numerka [01] na zielony neon */
+.mission-item.completed .mission-id {
+	color: #00ff00;
+	text-shadow: 0 0 5px #00ff00;
+	opacity: 1;
+}
+
+/* Zapalenie "diody" po prawej stronie */
+.mission-item.completed .status-dot {
+	background-color: #00ff00;
+	box-shadow: 0 0 10px #00ff00; /* Efekt świecenia */
+}
+
+/* --- NAWIGACJA MIĘDZY LEKCJAMI --- */
+.lesson-nav {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 40px;
+	margin-bottom: 20px;
+	border-top: 1px solid #333;
+	padding-top: 20px;
+}
+
+.nav-btn {
+	text-decoration: none;
+	color: var(--text-main);
+	background: #1a1a1a;
+	border: 1px solid #333;
+	padding: 10px 20px;
+	border-radius: 4px;
+	font-family: var(--font-mono);
+	font-size: 0.9rem;
+	transition: all 0.3s;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.nav-btn:hover {
+	border-color: var(--accent);
+	color: var(--accent);
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.nav-btn.home {
+	border-color: #555;
+}
+.nav-btn.home:hover {
+	background: #333;
+	color: #fff;
+	border-color: #fff;
+}
+
+/* Ukrywanie przycisków na pierwszej i ostatniej lekcji jeśli trzeba */
+.nav-btn.hidden {
+	visibility: hidden;
+}

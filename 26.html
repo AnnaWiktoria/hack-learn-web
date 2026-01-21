@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 26: Input Validation - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Validation Green (Clean Code / Approved) */
+        :root {
+            --accent: #00e676;
+            --accent-glow: rgba(0, 230, 118, 0.3);
+            --bad: #ff1744;
+        }
+        
+        .valid { color: #00e676; font-weight: bold; }
+        .invalid { color: #ff1744; font-weight: bold; text-decoration: line-through; }
+        .code-box { font-family: monospace; background: #111; padding: 10px; border: 1px solid #333; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>INPUT VALIDATION & SANITIZATION</h1>
+        <p>MODUŁ 26: Allowlist vs Blocklist, Encoding i pułapki Regexa</p>
+    </header>
+
+    <!-- 1. TRIADA OBRONY -->
+    <section>
+        <h2>> TRIADA OBRONY DANYCH</h2>
+        <p>Programiści mylą te pojęcia. Jako pentester/audytor musisz je rozróżniać, by dawać dobre rekomendacje.</p>
+        
+        <div class="card">
+            <ul>
+                <li><strong>Walidacja (Validation):</strong> Sprawdzenie, czy dane są poprawne. Odpowiedź: TAK/NIE. <br><em>Np. "Czy to jest email?"</em></li>
+                <li><strong>Sanityzacja (Sanitization):</strong> Usunięcie niebezpiecznych znaków. Odpowiedź: Wyczyszczony ciąg. <br><em>Np. Usunięcie `&lt;script&gt;` z komentarza.</em></li>
+                <li><strong>Kodowanie (Encoding):</strong> Zamiana znaków specjalnych na bezpieczny format wyświetlania. <br><em>Np. Zamiana `&lt;` na `&amp;lt;`.</em></li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- 2. ALLOWLIST vs BLOCKLIST -->
+    <section>
+        <h2>> ALLOWLIST (BIAŁA LISTA) TO KRÓL</h2>
+        <p>Największy błąd w kodzie? Próba przewidzenia "złych znaków" (Blocklist).</p>
+
+        <div class="card">
+            <h3>❌ PODEJŚCIE "BLOCKLIST" (Złe)</h3>
+            <p>Programista myśli: <em>"Zablokuję słowo `script`, żeby nie było XSS"</em>.</p>
+            <div class="code-box">
+                input.replace("script", "");
+            </div>
+            <p><strong>Bypass hakera:</strong></p>
+            <ul>
+                <li><code>&lt;scr<span class="invalid">script</span>ipt&gt;</code> -> Po usunięciu środka zostaje <code>&lt;script&gt;</code>.</li>
+                <li><code>&lt;img onerror=...&gt;</code> (Nie używa słowa script).</li>
+                <li><code>&lt;SCRIPT&gt;</code> (Duże litery).</li>
+            </ul>
+        </div>
+
+        <div class="card" style="border-color: var(--accent);">
+            <h3>✅ PODEJŚCIE "ALLOWLIST" (Dobre)</h3>
+            <p>Programista myśli: <em>"Akceptuję TYLKO litery i cyfry"</em>.</p>
+            <div class="code-box">
+                if (!input.matches("^[a-zA-Z0-9]*$")) { return ERROR; }
+            </div>
+            <p>To podejście jest bezpieczne, bo odrzuca wszystko, czego nie znamy (w tym znaki ataku <code>&lt;</code>, <code>'</code>, <code>/</code>).</p>
+        </div>
+    </section>
+
+    <!-- 3. OUTPUT ENCODING -->
+    <section>
+        <h2>> CONTEXT-AWARE ENCODING</h2>
+        <p>To, jak kodujesz dane, zależy od tego, gdzie je wyświetlasz. To jedyny sposób na powstrzymanie XSS.</p>
+
+        <div class="card">
+            <table>
+                <tr>
+                    <th>Kontekst</th>
+                    <th>Przykład</th>
+                    <th>Bezpieczne kodowanie</th>
+                </tr>
+                <tr>
+                    <td><strong>HTML Body</strong></td>
+                    <td><code>&lt;div&gt;USER_INPUT&lt;/div&gt;</code></td>
+                    <td>HTML Entity Encoding (<code>&lt;</code> &rarr; <code>&amp;lt;</code>)</td>
+                </tr>
+                <tr>
+                    <td><strong>Atrybut HTML</strong></td>
+                    <td><code>&lt;input value="USER_INPUT"&gt;</code></td>
+                    <td>Attribute Encoding (<code>"</code> &rarr; <code>&amp;quot;</code>)</td>
+                </tr>
+                <tr>
+                    <td><strong>JavaScript</strong></td>
+                    <td><code>var x = "USER_INPUT";</code></td>
+                    <td>Unicode Escaping (<code>'</code> &rarr; <code>\u0027</code>)</td>
+                </tr>
+            </table>
+            <p class="highlight">Używaj bibliotek! W Javie: OWASP Java Encoder. W JS: DOMPurify.</p>
+        </div>
+    </section>
+
+    <!-- 4. PUŁAPKA REGEX -->
+    <section>
+        <h2>> RE REGULAR EXPRESSION DOS (ReDoS)</h2>
+        <p>Źle napisane wyrażenie regularne może zawiesić serwer.</p>
+        <div class="card">
+            <p><strong>Zły Regex:</strong> <code>(a+)+b</code></p>
+            <p>Jeśli wyślesz ciąg: <code>aaaaaaaaaaaaaaaaaaaaa!</code> (bez 'b' na końcu), silnik Regex wpadnie w "Catastrophic Backtracking", próbując milionów kombinacji. Procesor skoczy do 100%.</p>
+            <p><strong>Rada:</strong> Unikaj zagnieżdżonych kwantyfikatorów (plus w plusie). Używaj timeoutów dla operacji regex.</p>
+        </div>
+    </section>
+
+    <!-- CHECKLIST -->
+    <section>
+        <h2>BLUE TEAM CHECKLIST 🛡️</h2>
+        <div class="card checklist-card">
+            <div class="checklist-item">
+                <span class="check-icon">🛡️</span>
+                <div><strong>Walidacja po stronie serwera:</strong> Walidacja w JS (na froncie) jest TYLKO dla wygody użytkownika (UX). Bezpieczeństwo zapewnia tylko walidacja na backendzie.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">🛡️</span>
+                <div><strong>Type Checking:</strong> Czy API sprawdza typy? Jeśli pole ma być liczbą (`age: 25`), a dostaje string (`age: "25' OR 1=1"`), powinno rzucić błędem.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">🛡️</span>
+                <div><strong>Biblioteki Sanityzujące:</strong> Nie pisz własnych funkcji czyszczących. Używaj sprawdzonych (np. DOMPurify dla HTML, OWASP ESAPI).</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>🎓 WERYFIKACJA WIEDZY OBRONNEJ</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | Moduł 26</p>
+    </footer>
+</div>
+
+<!-- DANE DO QUIZU -->
+<script>
+    const quizData = [
+        {
+            question: "Jaka jest różnica między podejściem 'Allowlist' (Biała Lista) a 'Blocklist' (Czarna Lista) w walidacji?",
+            options: [
+                "Blocklist jest bezpieczniejsza.",
+                "Allowlist definiuje to, co jest DOZWOLONE (np. tylko litery) i odrzuca resztę. Blocklist próbuje zdefiniować to, co ZABRONIONE (np. słowo 'script'), co łatwo obejść.",
+                "Nie ma różnicy.",
+                "Allowlist dotyczy tylko adresów IP."
+            ],
+            correct: 1,
+            explanation: "Blocklist zawsze przegra z kreatywnością hakera (np. `<scr script ipt>`). Allowlist ('Accept Known Good') to jedyne bezpieczne podejście."
+        },
+        {
+            type: "scenario",
+            question: "Deweloper zaimplementował walidację formularza w JavaScript, aby odciążyć serwer. Czy to wystarczy?",
+            options: [
+                "Tak, jeśli JS jest zminifikowany.",
+                "Nie. Walidacja Client-Side służy tylko do poprawy UX (szybka informacja zwrotna). Haker może wyłączyć JS lub wysłać żądanie bezpośrednio do API (np. przez Burp), omijając walidację.",
+                "Tak, React to zabezpiecza.",
+                "Zależy od przeglądarki."
+            ],
+            correct: 1,
+            explanation: "Złota zasada: Nigdy nie ufaj klientowi. Każda reguła walidacji (długość, typ, format) musi być powtórzona na backendzie."
+        },
+        {
+            question: "Co to jest 'Output Encoding' (Escaping) i przed czym chroni?",
+            options: [
+                "Szyfrowanie bazy danych.",
+                "Zamiana znaków specjalnych (np. <, >, \", ') na ich bezpieczne odpowiedniki (np. &lt;), aby przeglądarka traktowała je jako treść, a nie kod. Chroni przed XSS.",
+                "Kompresja obrazków.",
+                "Ukrywanie kodu źródłowego."
+            ],
+            correct: 1,
+            explanation: "To najskuteczniejsza obrona przed XSS. Przeglądarka wyświetli znaczek `<`, ale nie potraktuje go jako początku tagu HTML."
+        },
+        {
+            question: "Co to jest ReDoS (Regular Expression Denial of Service)?",
+            options: [
+                "Atak na DNS.",
+                "Atak wykorzystujący źle skonstruowane wyrażenia regularne (złożoność wykładnicza), który powoduje 100% zużycia CPU serwera przy przetwarzaniu złośliwego ciągu znaków.",
+                "Rodzaj wirusa.",
+                "Atak na kolory."
+            ],
+            correct: 1,
+            explanation: "Unikaj tzw. 'Evil Regex' (zagnieżdżonych kwantyfikatorów). Haker może wysłać krótki tekst, który 'zawiesi' proces sprawdzania na minuty lub godziny."
+        },
+        {
+            type: "scenario",
+            question: "Chcesz pozwolić użytkownikom na formatowanie tekstu w komentarzach (pogrubienie, kursywa), ale chcesz uniknąć XSS. Co jest najlepszym rozwiązaniem?",
+            options: [
+                "Pozwolić na czysty HTML i filtrować słowo 'script'.",
+                "Użyć Markdown (i bezpiecznego parsera) lub pozwolić na HTML, ale przepuścić go przez sprawdzoną bibliotekę sanityzującą (np. DOMPurify), która usunie niebezpieczne tagi.",
+                "Zablokować wszystkie znaki specjalne.",
+                "Użyć bazy SQL."
+            ],
+            correct: 1,
+            explanation: "Jeśli musisz pozwolić na HTML (Rich Text), użyj 'Sanitization Library'. One parsują HTML i budują go od nowa, używając tylko dozwolonych tagów (np. <b>, <i>)."
+        },
+        {
+            question: "Dlaczego walidacja typu danych (Type Checking) w API jest ważna dla bezpieczeństwa?",
+            options: [
+                "Bo przyspiesza bazę danych.",
+                "Ponieważ zapobiega wielu atakom logicznym i Injection. Jeśli pole 'ilość' przyjmie tylko Integer, nie da się tam wstrzyknąć kodu SQL ani tekstu.",
+                "Bo JSON tego wymaga.",
+                "To nie jest ważne."
+            ],
+            correct: 1,
+            explanation: "Silne typowanie to pierwsza linia obrony. Jeśli API oczekuje liczby, a dostaje string z kodem SQL, powinno od razu rzucić wyjątkiem, zanim kod dotrze do bazy."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

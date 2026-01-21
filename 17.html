@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 17: Business Logic & Race Conditions - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Phantom Indigo (Logic / Invisible Bugs) */
+        :root {
+            --accent: #7c4dff;
+            --accent-glow: rgba(124, 77, 255, 0.3);
+        }
+        
+        .step { color: #00e5ff; font-weight: bold; }
+        .thread { color: #ffeb3b; font-family: monospace; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>LOGIC FLAWS & RACE CONDITIONS</h1>
+        <p>MODUŁ 17: Błędy, których nie widzą skanery, Wyścigi i Darmowe Zakupy</p>
+    </header>
+
+    <!-- 1. BUSINESS LOGIC FLAWS -->
+    <section>
+        <h2>> CZYNNIK LUDZKI (LOGIC FLAWS)</h2>
+        <p>Błędy logiki biznesowej to sytuacje, w których program działa zgodnie z kodem, ale niezgodnie z założeniami biznesowymi. Skaner widzi "200 OK", pentester widzi "Darmowy iPhone".</p>
+        
+        <div class="card">
+            <h3>PRZYKŁADY Z ŻYCIA</h3>
+            <ul>
+                <li><strong>Omijanie kroków (Workflow Bypass):</strong>
+                    <br>Proces zakupu: <span class="step">1. Koszyk</span> -> <span class="step">2. Płatność</span> -> <span class="step">3. Potwierdzenie</span>.
+                    <br>Atak: Haker dodaje towar do koszyka i od razu wchodzi na URL kroku 3 (<code>/checkout/success</code>). Jeśli system nie sprawdza statusu płatności -> towar wysłany.</li>
+                
+                <li><strong>Ujemne kwoty:</strong>
+                    <br>Sklep pozwala wpisać ilość towaru.
+                    <br>Atak: Kupujesz <code>-1</code> laptopa. Sklep "oddaje" Ci pieniądze na saldo konta. Potem kupujesz coś innego za te środki.</li>
+                
+                <li><strong>Modyfikacja ceny:</strong>
+                    <br>Wybierasz tańszy produkt A, przechwytujesz żądanie i podmieniasz ID na droższy produkt B, licząc, że system policzy cenę z A, a wyśle B.</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- 2. RACE CONDITIONS -->
+    <section>
+        <h2>> WYŚCIGI (RACE CONDITIONS) 🏎️</h2>
+        <p>Co się stanie, jeśli wykonasz tę samą akcję 50 razy w ciągu 10 milisekund? Serwer może "zgłupieć".</p>
+        
+        <div class="card">
+            <h3>LIMIT OF ONE (Limit of... Infinity?)</h3>
+            <p>Masz kupon jednorazowy "RABAT-50".</p>
+            <p><strong>Logika serwera (uproszczona):</strong></p>
+            <pre><code>1. Sprawdź, czy kupon był użyty.
+2. Jeśli NIE: Zastosuj zniżkę.
+3. Oznacz kupon jako użyty.</code></pre>
+            
+            <p><strong>Atak:</strong> Wysyłasz 20 równoległych żądań (Multi-threaded) w tym samym momencie.</p>
+            <ul>
+                <li><span class="thread">Wątek 1</span>: Sprawdza (Czysty). Stosuje zniżkę...</li>
+                <li><span class="thread">Wątek 2</span>: Sprawdza (Czysty - bo Wątek 1 jeszcze nie zapisał zmiany!). Stosuje zniżkę...</li>
+                <li><span class="thread">Wątek 3</span>: Sprawdza (Czysty)...</li>
+            </ul>
+            <p><strong>Efekt:</strong> Zastosowałeś zniżkę wielokrotnie, zanim baza danych zdążyła się zaktualizować.</p>
+        </div>
+
+        <div class="card">
+            <h3>NARZĘDZIE: TURBO INTRUDER</h3>
+            <p>Ręczne klikanie jest za wolne. W Burp Suite używa się wtyczki <strong>Turbo Intruder</strong>. Pozwala ona wysłać tysiące żądań w jednej "paczce" sieciowej, minimalizując opóźnienia (latency).</p>
+        </div>
+    </section>
+
+    <!-- 3. TOCTOU -->
+    <section>
+        <h2>> TOCTOU (Time-Of-Check to Time-Of-Use)</h2>
+        <p>To techniczna nazwa problemu wyścigów.</p>
+        <div class="card">
+            <p>Pomiędzy momentem <strong>Sprawdzenia</strong> (Check: "Czy masz środki?"), a momentem <strong>Użycia</strong> (Use: "Przelej środki") mija ułamek sekundy.</p>
+            <p>W tym oknie czasowym stan systemu może się zmienić, ale program o tym nie wie. To "magiczne okno" dla hakera.</p>
+        </div>
+    </section>
+
+    <!-- CHECKLIST -->
+    <section>
+        <h2>CHECKLISTA / RED FLAGS</h2>
+        <div class="card checklist-card">
+            <div class="checklist-item">
+                <span class="check-icon">⚠</span>
+                <div><strong>Kupony i Karty Podarunkowe:</strong> Zawsze testuj Race Condition (użycie wielokrotne).</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">⚠</span>
+                <div><strong>Wieloetapowe formularze:</strong> Spróbuj pominąć krok 2 i przejść od razu do 3. Spróbuj cofnąć się z 3 do 1, zachowując sesję.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">⚠</span>
+                <div><strong>Limity (np. 3 lajki dziennie):</strong> Idealne miejsce na Race Condition.</div>
+            </div>
+             <div class="checklist-item">
+                <span class="check-icon">⚠</span>
+                <div><strong>Operacje finansowe:</strong> Wpłaty, wypłaty, przelewy. Co jeśli przelejesz pieniądze na dwa konta jednocześnie?</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>🎓 WERYFIKACJA WIEDZY</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | Moduł 17</p>
+    </footer>
+</div>
+
+<!-- DANE DO QUIZU -->
+<script>
+    const quizData = [
+        {
+            question: "Dlaczego automatyczne skanery bezpieczeństwa (np. Nessus, Burp Scanner) rzadko wykrywają błędy logiki biznesowej?",
+            options: [
+                "Bo skanery są przestarzałe.",
+                "Ponieważ błędy logiczne nie generują błędów technicznych (np. 500 error) i są zgodne ze składnią kodu. Wymagają zrozumienia kontekstu biznesowego (np. 'cena nie może być ujemna').",
+                "Bo logika biznesowa jest szyfrowana.",
+                "Bo skanery nie obsługują JavaScript."
+            ],
+            correct: 1,
+            explanation: "Skaner nie wie, że kupienie TV za 1 grosz jest błędem. Dla skanera to po prostu poprawna transakcja. Tu potrzebny jest człowiek."
+        },
+        {
+            question: "Co to jest 'Race Condition' (Wyścig)?",
+            options: [
+                "Szybkie wpisywanie hasła.",
+                "Błąd współbieżności, gdzie system wykonuje operacje w niewłaściwej kolejności lub równolegle, gdy powinien sekwencyjnie (np. dwa wątki modyfikują ten sam rekord w bazie w tym samym czasie).",
+                "Wyścig zbrojeń między hakerami.",
+                "Zbyt szybkie ładowanie strony."
+            ],
+            correct: 1,
+            explanation: "To sytuacja, gdy wynik operacji zależy od tego, który proces dobiegnie do mety pierwszy (lub czy dobiegną w tym samym czasie)."
+        },
+        {
+            type: "scenario",
+            question: "Masz kupon jednorazowy. Wysyłasz 50 żądań użycia tego kuponu w ułamku sekundy (używając Turbo Intruder). System zaliczył 12 użyć. Jak nazywa się ten atak?",
+            options: [
+                "Brute Force.",
+                "Race Condition (TOCTOU).",
+                "SQL Injection.",
+                "Parameter Pollution."
+            ],
+            correct: 1,
+            explanation: "Udało Ci się 'wstrzelić' w okno czasowe między sprawdzeniem ważności kuponu a jego unieważnieniem. Baza danych nie zdążyła się zaktualizować."
+        },
+        {
+            question: "Co oznacza skrót TOCTOU?",
+            options: [
+                "Time-Of-Click to Time-Of-User",
+                "Time-Of-Check to Time-Of-Use",
+                "Time-Out-Connection-Time-Out-User",
+                "The Only Correct Time Of Use"
+            ],
+            correct: 1,
+            explanation: "To techniczna definicja wyścigu. Czas między sprawdzeniem warunku (Check) a wykonaniem akcji (Use). W tym czasie stan systemu może ulec zmianie."
+        },
+        {
+            type: "scenario",
+            question: "Sklep internetowy ma proces: 1. Wybór towaru -> 2. Płatność -> 3. Wysyłka. Zauważasz, że URL wysyłki to `/shop/shipping?order_id=123`. Wpisujesz go w przeglądarkę z nowym ID, pomijając płatność, i system generuje etykietę wysyłkową. Co to za błąd?",
+            options: [
+                "XSS",
+                "Business Logic Flaw (Workflow Bypass)",
+                "CSRF",
+                "RCE"
+            ],
+            correct: 1,
+            explanation: "Aplikacja zakładała, że użytkownik grzecznie przejdzie krok po kroku. Nie zweryfikowała na etapie 3, czy etap 2 został zakończony sukcesem."
+        },
+        {
+            question: "Jak programiści powinni bronić się przed Race Conditions w bazie danych?",
+            options: [
+                "Używać transakcji z odpowiednim poziomem izolacji (np. SELECT FOR UPDATE / Locking) lub blokad (Locks/Mutex).",
+                "Blokować szybkie IP.",
+                "Używać szyfrowania SSL.",
+                "Wylączać bazę na noc."
+            ],
+            correct: 0,
+            explanation: "Mechanizm blokowania wierszy (Row Locking) sprawia, że drugi wątek musi poczekać, aż pierwszy zakończy transakcję. To eliminuje wyścig."
+        },
+        {
+            type: "scenario",
+            question: "W koszyku zmieniasz ilość produktu na '-5'. Suma zamówienia spada poniżej zera. Finalizujesz transakcję i system dodaje środki do Twojego portfela. To przykład:",
+            options: [
+                "Integer Overflow.",
+                "Błędu logiki biznesowej (brak walidacji wartości ujemnych).",
+                "SQL Injection.",
+                "SSRF."
+            ],
+            correct: 1,
+            explanation: "Programista zapomniał o prostej zasadzie: ilość > 0. Matematycznie -5 * 100 = -500, więc kod działał 'poprawnie', ale biznesowo to katastrofa."
+        },
+        {
+            question: "Jakie narzędzie w Burp Suite jest najlepsze do testowania Race Conditions?",
+            options: [
+                "Repeater (ręczne klikanie).",
+                "Decoder.",
+                "Turbo Intruder (rozszerzenie) lub Intruder z odpowiednią konfiguracją wątków.",
+                "Scanner."
+            ],
+            correct: 2,
+            explanation: "Turbo Intruder pozwala na wysyłanie żądań z użyciem własnego stosu HTTP, co umożliwia wysłanie ostatniego bajtu wielu żądań w tej samej mikrosekundzie."
+        },
+        {
+            type: "scenario",
+            question: "Aplikacja pozwala na reset hasła tylko po podaniu 6-cyfrowego kodu SMS. Limit prób to 3. Haker wysyła żądanie z poprawnym kodem i żądanie z błędnym kodem w tym samym czasie. System resetuje licznik prób. Co się stało?",
+            options: [
+                "Haker zgadł kod.",
+                "Wystąpił Race Condition w mechanizmie Rate Limitngu/Licznika.",
+                "System się zawiesił.",
+                "To normalne zachowanie."
+            ],
+            correct: 1,
+            explanation: "To częsty błąd. Logika zwiększania licznika nie była atomowa. Równoczesne żądania nadpisały wartość licznika niepoprawnie."
+        },
+        {
+            question: "Dlaczego zaufanie danym obliczanym po stronie klienta (np. cena w HTML) jest błędem?",
+            options: [
+                "Bo HTML jest wolny.",
+                "Bo klient (przeglądarka) jest pod pełną kontrolą użytkownika. Haker może zmienić każdą wartość wysyłaną do serwera (Cena, Ilość, Uprawnienia).",
+                "Bo RODO tego zabrania.",
+                "Bo serwer nie potrafi czytać HTML."
+            ],
+            correct: 1,
+            explanation: "Złota zasada bezpieczeństwa: Never Trust Client Input. Wszelkie obliczenia (ceny, rabaty) muszą być wykonywane ponownie na backendzie."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

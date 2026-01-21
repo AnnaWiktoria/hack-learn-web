@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 22: Advanced Recon - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: OSINT Teal (Intelligence / Surveillance) */
+        :root {
+            --accent: #00e5ff;
+            --accent-glow: rgba(0, 229, 255, 0.3);
+        }
+        
+        .dork-key { color: #ff0055; font-weight: bold; }
+        .dork-val { color: #fff; }
+        .tool-name { color: #ffd600; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>ADVANCED RECON & MAPPING</h1>
+        <p>MODUŁ 22: OSINT, Subdomeny i Mapowanie Powierzchni Ataku</p>
+    </header>
+
+    <!-- 1. PASYWNY REKONESANS -->
+    <section>
+        <h2>> OSINT: BIAŁY WYWIAD</h2>
+        <p>Zanim wyślesz pierwszy pakiet do serwera (Active Recon), dowiedz się o nim wszystkiego, nie dotykając go (Passive Recon). To niewykrywalne.</p>
+        
+        <div class="card">
+            <h3>GOOGLE DORKING</h3>
+            <p>Wyszukiwarka Google zindeksowała miliony plików, których nie powinno być w sieci. Używaj operatorów:</p>
+            <pre><code><span class="dork-key">site:</span>target.com <span class="dork-key">filetype:</span>pdf "confidential"
+<span class="dork-key">site:</span>target.com <span class="dork-key">inurl:</span>admin
+<span class="dork-key">site:</span>trello.com "target_company_name"</code></pre>
+            <p>Możesz znaleźć instrukcje dla pracowników, hasła, a nawet publiczne tablice Trello z planami IT.</p>
+        </div>
+
+        <div class="card">
+            <h3>CERTIFICATE TRANSPARENCY (crt.sh)</h3>
+            <p>Każdy certyfikat SSL jest rejestrowany publicznie. Dzięki temu znajdziesz subdomeny, o których klient zapomniał.</p>
+            <p><strong>Narzędzie:</strong> Wejdź na <code>crt.sh</code> i wpisz <code>%.target.com</code>.</p>
+            <p><strong>Wynik:</strong> Znajdziesz <code>dev.target.com</code>, <code>test-api.target.com</code>, <code>vpn.target.com</code>.</p>
+        </div>
+    </section>
+
+    <!-- 2. AKTYWNE MAPOWANIE -->
+    <section>
+        <h2>> AKTYWNE SKANOWANIE (TOUCHING THE TARGET)</h2>
+        <p>Teraz wchodzimy w interakcję. Tutaj potrzebujesz już zgody (Scope).</p>
+
+        <div class="card">
+            <h3>SUBDOMAIN ENUMERATION</h3>
+            <p>Subdomeny to często "miękkie podbrzusze" firmy. Produkcja jest twarda, ale środowisko deweloperskie (dev/staging) często nie ma WAF-a i ma włączone debugowanie.</p>
+            <ul>
+                <li><span class="tool-name">Subfinder / Amass:</span> Narzędzia, które przeczesują internet w poszukiwaniu subdomen.</li>
+                <li><span class="tool-name">FFUF (Fuzz Faster U Fool):</span> Bruteforce DNS. Zgadujesz nazwy: <code>api</code>, <code>corp</code>, <code>jenkins</code>.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>TECH STACK FINGERPRINTING</h3>
+            <p>Musisz wiedzieć, co atakujesz. Czy to WordPress? Czy Java Spring? Czy Node.js?</p>
+            <ul>
+                <li><strong>Wappalyzer:</strong> Wtyczka do przeglądarki pokazująca technologie.</li>
+                <li><strong>Nagłówki HTTP:</strong> <code>Server: Apache/2.4.49</code> (stara wersja = znane podatności CVE).</li>
+                <li><strong>Pliki specyficzne:</strong> <code>/wp-login.php</code> (WordPress), <code>/actuator/health</code> (Java Spring Boot).</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- 3. ZAPOMNIANE ZASOBY -->
+    <section>
+        <h2>> SHADOW IT & WAYBACK MACHINE</h2>
+        <p>Największe błędy leżą tam, gdzie nikt nie zagląda.</p>
+
+        <div class="card">
+            <h3>WAYBACK MACHINE (archive.org)</h3>
+            <p>Sprawdź, jak strona wyglądała 5 lat temu. Może stary endpoint <code>/v1/api/login</code> nadal działa, mimo że na stronie głównej jest link tylko do <code>/v2/</code>? Stare endpointy są często dziurawe.</p>
+        </div>
+
+        <div class="card">
+            <h3>GITHUB RECON</h3>
+            <p>Deweloperzy często przypadkiem commitują klucze API lub hasła do publicznych repozytoriów.</p>
+            <p><strong>Szukaj:</strong> <code>"target.com" password</code> lub <code>"target.com" AWS_KEY</code>.</p>
+        </div>
+    </section>
+
+    <!-- CHECKLIST -->
+    <section>
+        <h2>AUDIT CHECKLIST: RECONNAISSANCE 🕵️‍♂️</h2>
+        <div class="card checklist-card">
+            <div class="checklist-item">
+                <span class="check-icon">🗺️</span>
+                <div><strong>Subdomain Takeover:</strong> Czy jakaś subdomena wskazuje na nieistniejący zasób w chmurze (np. usunięty bucket S3)? Możesz go zarejestrować i przejąć subdomenę.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">🗺️</span>
+                <div><strong>Katalogi .git / .env:</strong> Zawsze sprawdzaj, czy katalog `.git` jest dostępny publicznie. To pozwala pobrać cały kod źródłowy.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">🗺️</span>
+                <div><strong>Port Scanning (Nmap/Shodan):</strong> Czy serwer webowy ma otwarte inne porty? Np. 8080 (Tomcat), 22 (SSH), 3306 (MySQL).</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>🎓 AUDYT: FAZA ZWIADU</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | Moduł 22</p>
+    </footer>
+</div>
+
+<!-- DANE DO QUIZU -->
+<script>
+    const quizData = [
+        {
+            question: "Na czym polega różnica między Pasywnym a Aktywnym rekonesansem?",
+            options: [
+                "Pasywny jest wolniejszy.",
+                "Pasywny (OSINT) nie interweniuje bezpośrednio z systemem docelowym (korzysta z publicznych danych), więc jest trudny do wykrycia. Aktywny (skanowanie) wysyła pakiety do celu i zostawia ślady w logach.",
+                "Aktywny wymaga płatnych narzędzi.",
+                "Nie ma różnicy."
+            ],
+            correct: 1,
+            explanation: "Pasywny Recon (np. przeglądanie LinkedIn, crt.sh) jest bezpieczny prawnie nawet bez umowy (to dane publiczne). Aktywny (Nmap, Dirb) wymaga zgody właściciela."
+        },
+        {
+            question: "Do czego służy serwis `crt.sh` w fazie rekonesansu?",
+            options: [
+                "Do łamania haseł.",
+                "Do wyszukiwania subdomen firmy na podstawie publicznych logów certyfikatów SSL (Certificate Transparency).",
+                "Do sprawdzania szybkości strony.",
+                "Do generowania raportów."
+            ],
+            correct: 1,
+            explanation: "Każdy wydany certyfikat SSL jest rejestrowany. `crt.sh` pozwala zobaczyć historię wszystkich certyfikatów dla `*.firma.pl`, ujawniając subdomeny jak `vpn.firma.pl` czy `dev.firma.pl`."
+        },
+        {
+            type: "scenario",
+            question: "Używając narzędzia FFUF (katalog fuzzing), znajdujesz plik `/.env` dostępny publicznie (status 200). Co to oznacza dla audytora?",
+            options: [
+                "Nic ważnego, to plik konfiguracyjny CSS.",
+                "Critical Impact. Plik `.env` często zawiera klucze API, hasła do bazy danych i sekrety aplikacji w plain-text.",
+                "Low Impact. To tylko zmienne środowiskowe.",
+                "To błąd 404."
+            ],
+            correct: 1,
+            explanation: "Wyciek `.env` to jedna z najczęstszych przyczyn całkowitego przejęcia infrastruktury. To 'klucze do królestwa'."
+        },
+        {
+            question: "Co to są 'Google Dorks'?",
+            options: [
+                "Pracownicy Google.",
+                "Zaawansowane zapytania do wyszukiwarki (np. `filetype:pdf`, `site:target.com`), pozwalające znaleźć zaindeksowane pliki wrażliwe, panele logowania lub błędy konfiguracji.",
+                "Wtyczki do Chrome.",
+                "Błędy w Gmailu."
+            ],
+            correct: 1,
+            explanation: "Google to potężny skaner bezpieczeństwa. Hakerzy używają go, by znaleźć np. publicznie dostępne pliki z hasłami (`filetype:xls password`)."
+        },
+        {
+            type: "scenario",
+            question: "Znajdujesz nagłówek HTTP `Server: Apache/2.2.15`. Co robisz?",
+            options: [
+                "Ignoruję, Apache to dobry serwer.",
+                "Notuję wersję i sprawdzam w bazie CVE (Common Vulnerabilities and Exposures), czy ta wersja ma znane, publiczne exploity.",
+                "Próbuję się zalogować jako admin.",
+                "Wyłączam serwer."
+            ],
+            correct: 1,
+            explanation: "To się nazywa 'Version Fingerprinting'. Stare oprogramowanie często ma znane luki, na które gotowe są exploity. To łatwy cel."
+        },
+        {
+            question: "Dlaczego Wayback Machine (archive.org) jest przydatne dla pentestera?",
+            options: [
+                "Pozwala zobaczyć historię firmy.",
+                "Pozwala znaleźć stare, zapomniane endpointy API lub pliki, które zostały usunięte z menu strony, ale fizycznie wciąż istnieją na serwerze i mogą być podatne.",
+                "Jest szybsze niż Google.",
+                "Pozwala cofnąć czas."
+            ],
+            correct: 1,
+            explanation: "Programiści często usuwają linki do starych funkcji (Security by Obscurity), ale nie usuwają kodu z serwera. Wayback Machine pamięta te linki."
+        },
+        {
+            question: "Co to jest 'Subdomain Takeover'?",
+            options: [
+                "Kupienie domeny firmy.",
+                "Sytuacja, gdy rekord DNS firmy wskazuje na zewnętrzną usługę (np. Heroku, AWS S3), która została usunięta. Atakujący może zarejestrować tę usługę na siebie i przejąć ruch z zaufanej subdomeny.",
+                "Atak DDoS na DNS.",
+                "Zmiana nazwy firmy."
+            ],
+            correct: 1,
+            explanation: "To błąd konfiguracji DNS (tzw. Dangling DNS). Firma zapomniała usunąć wpis CNAME po rezygnacji z usługi w chmurze."
+        },
+        {
+            question: "Jakie narzędzie (wtyczka do przeglądarki) pozwala szybko zidentyfikować technologie używane na stronie (CMS, Framework, Serwer)?",
+            options: [
+                "AdBlock.",
+                "Wappalyzer (lub BuiltWith).",
+                "LastPass.",
+                "Grammarly."
+            ],
+            correct: 1,
+            explanation: "Wappalyzer analizuje kod strony, ciasteczka i nagłówki, by powiedzieć Ci: 'To jest WordPress, używa jQuery 3.0 i serwera Nginx'."
+        },
+        {
+            type: "scenario",
+            question: "Przeglądasz repozytoria firmy na GitHubie. Znajdujesz plik z kodem: `const AWS_SECRET = 'AKIA...'`. Co to jest?",
+            options: [
+                "Przykładowy klucz.",
+                "Hardcoded Credential / Secret Leak. To krytyczny błąd, który może pozwolić na dostęp do chmury AWS firmy.",
+                "Klucz publiczny, to bezpieczne.",
+                "Błąd kompilacji."
+            ],
+            correct: 1,
+            explanation: "Wycieki sekretów na GitHubie to plaga. Istnieją narzędzia (np. TruffleHog), które skanują GitHuba w poszukiwaniu takich wpadek."
+        },
+        {
+            question: "Co to jest 'Shadow IT'?",
+            options: [
+                "Hakerzy w kapturach.",
+                "Zasoby IT (serwery, aplikacje, chmury) używane w firmie bez wiedzy i kontroli działu bezpieczeństwa. Są często słabo zabezpieczone i stanowią łatwy cel.",
+                "Ciemny motyw w IDE.",
+                "Tryb incognito."
+            ],
+            correct: 1,
+            explanation: "Shadow IT to np. serwer deweloperski postawiony 'na szybko' przez stażystę, o którym wszyscy zapomnieli, a który wciąż jest podłączony do sieci firmowej."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

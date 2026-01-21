@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 20: Decision Labs - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Blueprint Blue (Strategy / Decision) */
+        :root {
+            --accent: #2962ff;
+            --accent-glow: rgba(41, 98, 255, 0.3);
+        }
+        
+        .impact-badge {
+            display: inline-block;
+            background: rgba(255, 23, 68, 0.15);
+            border: 1px solid #ff1744;
+            color: #ff1744;
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            font-family: var(--font-mono);
+        }
+
+        .auditor-note {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px dashed #444;
+            color: var(--accent);
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+        
+        .scenario-box {
+            background: #0a0a0a;
+            border-left: 3px solid var(--accent);
+            padding: 15px;
+            margin-bottom: 15px;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>DECISION LABS: TRIAGE</h1>
+        <p>MODUŁ 20: Priorytetyzacja, Eliminacja "Rabbit Holes" i Szybka Ocena</p>
+    </header>
+
+    <!-- WSTĘP -->
+    <section>
+        <h2>> SZTUKA WYBORU (TRIAGE)</h2>
+        <p>Podczas audytu nie masz czasu na sprawdzenie wszystkiego. Musisz decydować: co jest potencjalnym "Criticalem", a co stratą czasu ("Rabbit Hole").</p>
+    </section>
+
+    <!-- LAB 1: RECON ANOMALY -->
+    <section>
+        <h2>> LAB 01: DZIWNE ZACHOWANIE 403</h2>
+        <div class="card">
+            <h3>OBSERWACJA:</h3>
+            <p>Skanujesz katalogi (Fuzzing). Otrzymujesz takie wyniki:</p>
+            <div class="scenario-box">
+                GET /admin &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-> <span style="color:orange">403 Forbidden</span><br>
+                GET /admin/login -> <span style="color:red">404 Not Found</span><br>
+                GET /admin/css &nbsp;&nbsp;-> <span style="color:green">200 OK</span> (Pusty plik)<br>
+                GET /admin/TEST &nbsp;&nbsp;-> <span style="color:green">200 OK</span> (Defaultowa strona frameworka)
+            </div>
+
+            <p><strong>Decyzja:</strong> Co atakujesz?</p>
+            <ul>
+                <li><strong>Opcja A:</strong> Brute-force katalogu `/admin`.</li>
+                <li><strong>Opcja B:</strong> Analiza `/admin/TEST` i `/admin/css`.</li>
+                <li><strong>Opcja C:</strong> Próba bypassu 403 na `/admin`.</li>
+            </ul>
+
+            <div class="impact-badge">[Impact: Information Disclosure / Admin Access]</div>
+
+            <p><strong>Analiza:</strong> Skoro `/admin/TEST` zwraca 200, to znaczy, że mechanizm blokady (403) na katalogu głównym jest dziurawy lub źle skonfigurowany. To "Low Hanging Fruit".</p>
+            
+            <div class="auditor-note">
+                💡 <strong>Następny krok audytora:</strong> Sprawdziłbym, czy `/admin/TEST` ujawnia wersję frameworka lub błędy (Stack Trace), a następnie spróbowałbym technik "403 Bypass" (np. nagłówki X-Forwarded-For).
+            </div>
+        </div>
+    </section>
+
+    <!-- LAB 2: INPUT REFLECTION -->
+    <section>
+        <h2>> LAB 02: 7 * 7 = ?</h2>
+        <div class="card">
+            <h3>OBSERWACJA:</h3>
+            <p>Wpisujesz w pole wyszukiwania: <code>{{7*7}}</code>.</p>
+            <div class="scenario-box">
+                <strong>Input:</strong> {{7*7}}<br>
+                <strong>Output (na stronie):</strong> Wyniki wyszukiwania dla: 49
+            </div>
+
+            <p><strong>Decyzja:</strong> Co to za błąd?</p>
+            <ul>
+                <li><strong>Opcja A:</strong> XSS (Cross-Site Scripting).</li>
+                <li><strong>Opcja B:</strong> SSTI (Server-Side Template Injection).</li>
+                <li><strong>Opcja C:</strong> SQL Injection.</li>
+            </ul>
+
+            <div class="impact-badge">[Impact: RCE (Remote Code Execution)]</div>
+
+            <p><strong>Analiza:</strong> Gdyby to był XSS, zobaczyłbyś tekst `{{7*7}}`. Skoro widzisz `49`, to znaczy, że serwer <strong>wykonał operację matematyczną</strong>. To cecha silników szablonów (Template Engines). SSTI jest znacznie groźniejsze niż XSS.</p>
+
+            <div class="auditor-note">
+                💡 <strong>Następny krok audytora:</strong> Zidentyfikowałbym silnik (Jinja2? Twig? Velocity?) i spróbowałbym payloadu wykonującego komendę systemową (np. `id`).
+            </div>
+        </div>
+    </section>
+
+    <!-- LAB 3: TIMING ATTACK -->
+    <section>
+        <h2>> LAB 03: MAGIA CZASU</h2>
+        <div class="card">
+            <h3>OBSERWACJA:</h3>
+            <p>Testujesz parametr `?id=`. Serwer odpowiada zwykle w 100ms.</p>
+            <div class="scenario-box">
+                id=1' &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-> 100ms (200 OK)<br>
+                id=1" &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-> 100ms (200 OK)<br>
+                id=1' WAITFOR DELAY '0:0:5' -> <strong>5100ms</strong> (200 OK)<br>
+                id=1' WAITFOR DELAY '0:0:2' -> <strong>2100ms</strong> (200 OK)
+            </div>
+
+            <p><strong>Decyzja:</strong> Czy zgłaszasz błąd?</p>
+            
+            <div class="impact-badge">[Impact: Database Compromise / Data Exfiltration]</div>
+
+            <p><strong>Analiza:</strong> Korelacja czasu odpowiedzi z Twoim payloadem (5s i 2s) jest dowodem na <strong>Blind SQL Injection</strong>. Błąd nie jest widoczny w treści, ale serwer "słucha" Twoich poleceń.</p>
+
+            <div class="auditor-note">
+                💡 <strong>Następny krok audytora:</strong> Użyłbym `sqlmap` lub ręcznego skryptu do wyciągnięcia nazwy bazy danych, znak po znaku, wykorzystując opóźnienia czasowe.
+            </div>
+        </div>
+    </section>
+
+    <!-- CHECKLIST -->
+    <section>
+        <h2>DECISION MATRIX 🧠</h2>
+        <div class="card checklist-card">
+            <div class="checklist-item">
+                <span class="check-icon">🚦</span>
+                <div><strong>Input == Output?</strong> Jeśli tak -> testuj XSS. Jeśli Output to wynik obliczenia -> testuj SSTI/RCE.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">🚦</span>
+                <div><strong>Lag po payloadzie?</strong> Jeśli strona zwalnia po wpisaniu `sleep` lub `'` -> testuj Blind SQLi lub Command Injection.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">🚦</span>
+                <div><strong>403 vs 404?</strong> 403 oznacza "coś tu jest, ale nie wejdziesz". 404 oznacza "nic tu nie ma". Skup się na 403.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>🎓 SYMULACJA DECYZYJNA</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | Moduł 20</p>
+    </footer>
+</div>
+
+<!-- DANE DO QUIZU -->
+<script>
+    const quizData = [
+        {
+            type: "scenario",
+            question: "Widzisz formularz logowania. Po wpisaniu niepoprawnego użytkownika dostajesz komunikat: 'User not found'. Po wpisaniu poprawnego użytkownika i złego hasła: 'Invalid password'. Co znalazłeś?",
+            options: [
+                "Broken Authentication (Słabe hasła).",
+                "Username Enumeration (Information Disclosure).",
+                "SQL Injection.",
+                "XSS."
+            ],
+            correct: 1,
+            explanation: "Różne komunikaty błędów pozwalają hakerowi stworzyć listę poprawnych loginów w systemie, co ułatwia późniejszy atak Brute-Force na hasła.<br><br><strong>[Impact: Account Takeover prep]</strong><br><em>💡 Następny krok audytora: Sprawdziłbym, czy istnieje Rate Limiting (blokada po N próbach).</em>"
+        },
+        {
+            type: "scenario",
+            question: "W URL widzisz parametr `?redirect=http://google.com`. Po wejściu, strona przekierowuje Cię na Google. Co testujesz w pierwszej kolejności?",
+            options: [
+                "SQL Injection.",
+                "Open Redirect (przekierowanie na evil.com) oraz XSS (javascript:alert(1)).",
+                "Command Injection.",
+                "Path Traversal."
+            ],
+            correct: 1,
+            explanation: "Parametry przekierowań to klasyczny wektor dla Phishingu (Open Redirect) lub XSS (jeśli można użyć protokołu `javascript:`).<br><br><strong>[Impact: Phishing / XSS]</strong><br><em>💡 Następny krok audytora: Sprawdziłbym, czy walidacja domeny jest ścisła (czy puszcza `google.com.evil.com`).</em>"
+        },
+        {
+            type: "scenario",
+            question: "Przesyłasz plik SVG jako awatar. Serwer go wyświetla. Co sprawdzasz najpierw?",
+            options: [
+                "Czy mogę wgrać plik .exe.",
+                "Czy w SVG wykona się XSS (`<script>`) lub XXE (odczyt plików).",
+                "Czy plik jest duży.",
+                "Czy obrazek jest ładny."
+            ],
+            correct: 1,
+            explanation: "SVG to XML. Przeglądarki wykonują w nim JS (Stored XSS), a serwery parsują XML (XXE).<br><br><strong>[Impact: Stored XSS / File Read]</strong><br><em>💡 Następny krok audytora: Wgrałbym SVG z payloadem `<!ENTITY xxe SYSTEM 'file:///etc/passwd'>`.</em>"
+        },
+        {
+            type: "scenario",
+            question: "Endpoint API `/users/100` zwraca dane użytkownika. Zmieniasz na `/users/101` i dostajesz 403 Forbidden. Co robisz dalej?",
+            options: [
+                "Zgłaszam IDOR.",
+                "Nic, zabezpieczenie działa (AuthZ jest poprawne). Przechodzę do innych testów (np. zmiana metody HTTP na PUT/DELETE).",
+                "Próbuję SQL Injection.",
+                "Zgłaszam błąd 403."
+            ],
+            correct: 1,
+            explanation: "403 oznacza, że serwer poprawnie sprawdził uprawnienia i zablokował dostęp. To NIE jest błąd (chyba że komunikat zdradza coś innego). Nie trać czasu.<br><br><strong>[Impact: N/A (Secure)]</strong><br><em>💡 Następny krok audytora: Sprawdziłbym, czy metody zmieniające stan (POST/PUT) również są zabezpieczone.</em>"
+        },
+        {
+            type: "scenario",
+            question: "Podczas rejestracji nowego konta, aplikacja wysyła request: `POST /register { role: 'user', ... }`. Co robisz?",
+            options: [
+                "Szukam XSS w nazwie użytkownika.",
+                "Zmieniam 'role': 'user' na 'admin' lub 'superuser' (Mass Assignment).",
+                "Sprawdzam certyfikat SSL.",
+                "Testuję CSRF."
+            ],
+            correct: 1,
+            explanation: "Jeśli parametr roli jest przesyłany od klienta, istnieje ryzyko, że backend mu zaufa.<br><br><strong>[Impact: Privilege Escalation]</strong><br><em>💡 Następny krok audytora: Jeśli to zadziała, sprawdziłbym, czy mogę nadpisać inne pola, np. 'is_verified': true.</em>"
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

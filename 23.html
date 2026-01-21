@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 23: Vulnerability Chaining - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Chain-Link Orange (Synergy / Connections) */
+        :root {
+            --accent: #ff9100;
+            --accent-glow: rgba(255, 145, 0, 0.3);
+        }
+        
+        .chain-plus { color: #00e5ff; font-weight: bold; font-size: 1.2em; }
+        .chain-equals { color: #ff0055; font-weight: bold; font-size: 1.2em; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>VULNERABILITY CHAINING</h1>
+        <p>MODUŁ 23: Matematyka Hakera (1 + 1 = Critical)</p>
+    </header>
+
+    <!-- 1. KONCEPCJA -->
+    <section>
+        <h2>> EFEKT DOMINA</h2>
+        <p>Większość nowoczesnych aplikacji jest zbyt dobrze zabezpieczona, by zhakować je jednym "strzałem". Atakujący musi znaleźć małą dziurę, by otworzyć drzwi do większej.</p>
+        
+        <div class="card">
+            <h3>MATEMATYKA RYZYKA</h3>
+            <p><strong>Low</strong> (Niskie ryzyko) + <strong>Low</strong> = <strong style="color:var(--danger)">Critical</strong>.</p>
+            <p>Nie zgłaszaj klientowi: "Znalazłem XSS, ale działa tylko na mnie". Zgłoś: "Znalazłem sposób na przejęcie konta Administratora, łącząc XSS z brakiem tokena CSRF".</p>
+        </div>
+    </section>
+
+    <!-- 2. KLASYCZNE ŁAŃCUCHY -->
+    <section>
+        <h2>> ZNANE KOMBINACJE (COMBO)</h2>
+
+        <div class="card">
+            <h3>1. SELF-XSS + CSRF -> STORED XSS</h3>
+            <ul>
+                <li><strong>Błąd 1 (Self-XSS):</strong> Możesz wstrzyknąć JS w pole "Imię", ale widzi to tylko zalogowany użytkownik (Ty). Ryzyko: Zerowe (nikt tego nie kupi).</li>
+                <li><strong>Błąd 2 (CSRF):</strong> Formularz zmiany imienia nie ma tokena CSRF. Ryzyko: Średnie.</li>
+                <li><strong>CHAIN:</strong> Tworzysz stronę-pułapkę, która po wejściu ofiary (CSRF) zmienia jej imię na Twój payload (XSS). Teraz ofiara ma XSS w swoim profilu.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>2. OPEN REDIRECT + OAUTH -> ACCOUNT TAKEOVER</h3>
+            <ul>
+                <li><strong>Błąd 1 (Open Redirect):</strong> Parametr <code>?next=http://evil.com</code> przekierowuje użytkownika na zewnątrz. Ryzyko: Niskie (Phishing).</li>
+                <li><strong>Błąd 2 (OAuth):</strong> Logowanie przez Google/Facebook wysyła token autoryzacyjny na adres podany w <code>redirect_uri</code>.</li>
+                <li><strong>CHAIN:</strong> Ustawiasz <code>redirect_uri</code> na Twój Open Redirect. Token po zalogowaniu trafia na stronę firmy, która przekierowuje go (wraz z tokenem w URL) do Ciebie. Przejmujesz konto.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>3. LFI + FILE UPLOAD -> RCE</h3>
+            <ul>
+                <li><strong>Błąd 1 (File Upload):</strong> Możesz wgrać tylko pliki <code>.txt</code>. Kod PHP nie działa.</li>
+                <li><strong>Błąd 2 (LFI):</strong> Możesz wczytać dowolny plik z serwera.</li>
+                <li><strong>CHAIN:</strong> Wgrywasz kod PHP jako <code>notatki.txt</code>. Następnie używasz LFI, by wczytać ten plik. Serwer wykonuje zawartość pliku tekstowego jako PHP. Masz RCE.</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- 3. LOGIC CHAINS -->
+    <section>
+        <h2>> ŁAŃCUCHY LOGICZNE</h2>
+        <p>Czasami łączymy błędy biznesowe.</p>
+
+        <div class="card">
+            <h3>IDOR + PASS RESET POISONING</h3>
+            <p>Możesz podejrzeć email innego użytkownika przez IDOR (<code>/api/users/105</code>). Znając email, używasz "Host Header Injection" przy resecie hasła, by link resetujący przyszedł na Twój serwer, a nie ofiary.</p>
+        </div>
+    </section>
+
+    <!-- CHECKLIST -->
+    <section>
+        <h2>AUDIT CHECKLIST: CHAIN OPPORTUNITIES 🔗</h2>
+        <div class="card checklist-card">
+            <div class="checklist-item">
+                <span class="check-icon">🔗</span>
+                <div><strong>Masz XSS?</strong> Szukaj braku HttpOnly w ciasteczkach (kradzież sesji) lub braku CSRF (wymuszanie akcji).</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">🔗</span>
+                <div><strong>Masz CSRF?</strong> Szukaj funkcji zmieniających email lub hasło. To prowadzi do przejęcia konta.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">🔗</span>
+                <div><strong>Masz Info Disclosure (Wersja softu)?</strong> Szukaj publicznych exploitów (CVE) na tę konkretną wersję.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>🎓 AUDYT: POŁĄCZ KROPKI</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | Moduł 23</p>
+    </footer>
+</div>
+
+<!-- DANE DO QUIZU -->
+<script>
+    const quizData = [
+        {
+            type: "scenario",
+            question: "Znalazłeś 'Self-XSS' (payload wykonuje się tylko w Twojej konsoli po wpisaniu go ręcznie). Program Bug Bounty odrzuca to zgłoszenie. Czego potrzebujesz, aby zamienić to w validny błąd?",
+            options: [
+                "SQL Injection.",
+                "CSRF (Cross-Site Request Forgery) lub Clickjacking, który zmusi ofiarę do wpisania/wykonania tego payloadu na jej koncie.",
+                "Dostępu do serwera.",
+                "Lepszego payloadu."
+            ],
+            correct: 1,
+            explanation: "Self-XSS jest groźny tylko wtedy, gdy uda Ci się zmusić kogoś innego do wykonania go. CSRF (np. w formularzu profilu) jest idealnym nośnikiem."
+        },
+        {
+            type: "scenario",
+            question: "Masz Open Redirect na stronie `bank.com/go?url=...`. Jak możesz to wykorzystać do kradzieży tokenów OAuth (Logowanie przez Google/FB)?",
+            options: [
+                "Nie da się.",
+                "Podmieniasz `redirect_uri` w procesie logowania OAuth na adres Open Redirecta. Token trafi do zaufanej domeny banku, która następnie przekieruje go (wraz z tokenem w URL) na Twój serwer.",
+                "Przekierowujesz użytkownika na stronę z wirusem.",
+                "Blokujesz logowanie."
+            ],
+            correct: 1,
+            explanation: "Dostawcy tożsamości (Google, FB) ufają domenie `bank.com`. Open Redirect pozwala 'wyciągnąć' token z zaufanej domeny na zewnątrz."
+        },
+        {
+            question: "Znalazłeś plik `phpinfo.php` (Information Disclosure). Widzisz wersję PHP i ścieżki systemowe. Czy to jest groźne?",
+            options: [
+                "Tylko informacyjnie (Low).",
+                "Jeśli połączysz to z LFI (Local File Inclusion), ścieżki pozwolą Ci precyzyjnie celować w pliki. Jeśli wersja PHP jest stara, może mieć exploity RCE.",
+                "To błąd krytyczny sam w sobie.",
+                "Nie, to funkcja debugowania."
+            ],
+            correct: 1,
+            explanation: "Sama informacja to mało. Ale informacja jest amunicją do innych ataków. LFI bez znajomości ścieżek to zgadywanie. Z `phpinfo` to precyzyjny strzał."
+        },
+        {
+            type: "scenario",
+            question: "Możesz wgrać tylko plik tekstowy (.txt), ale masz też podatność LFI na tej samej stronie. Jaki jest Impact?",
+            options: [
+                "File Read (możesz czytać pliki).",
+                "RCE (Remote Code Execution). Wgrywasz kod PHP jako .txt, a następnie używasz LFI, by serwer wykonał ten plik jako skrypt PHP.",
+                "DoS.",
+                "XSS."
+            ],
+            correct: 1,
+            explanation: "LFI nie dba o rozszerzenie pliku. Jeśli zainkludujesz plik zawierający `<?php ... ?>`, serwer go wykona, nawet jeśli nazywa się `notatka.txt`."
+        },
+        {
+            question: "Dlaczego łańcuchy podatności (Chains) są wyżej oceniane w CVSS niż pojedyncze błędy?",
+            options: [
+                "Bo są trudniejsze do znalezienia.",
+                "Ponieważ Impact (skutek) łańcucha jest sumą lub mnożnikiem skutków składowych. Dwa błędy o niskim wpływie mogą razem pozwolić na całkowite przejęcie systemu.",
+                "Bo tak mówi OWASP.",
+                "Bo raport jest dłuższy."
+            ],
+            correct: 1,
+            explanation: "CVSS ocenia Impact. Self-XSS ma Impact 'None' dla innych. Self-XSS + CSRF ma Impact 'High' (przejęcie sesji)."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

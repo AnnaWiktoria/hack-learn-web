@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 27: WAF & Monitoring - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Sensor Orange (Alerts / Monitoring) */
+        :root {
+            --accent: #ff3d00;
+            --accent-glow: rgba(255, 61, 0, 0.3);
+            --log: #00e5ff;
+        }
+        
+        .log-box {
+            background: #000;
+            border: 1px solid #333;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: #ccc;
+            overflow-x: auto;
+        }
+        .log-time { color: #888; }
+        .log-ip { color: var(--accent); }
+        .log-attack { color: #ff0055; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>WAF & MONITORING</h1>
+        <p>MODUŁ 27: Web Application Firewall, Wirtualne Łatanie i Logi</p>
+    </header>
+
+    <!-- 1. CZYM JEST WAF? -->
+    <section>
+        <h2>> WAF: CYFROWY OCHRONIARZ</h2>
+        <p>Zwykły Firewall sieciowy (warstwa 3/4) blokuje porty i adresy IP. <strong>WAF (Web Application Firewall)</strong> działa w warstwie 7 (Aplikacji). Rozumie HTTP, czyta parametry URL i ciasteczka.</p>
+        
+        <div class="card">
+            <h3>JAK DZIAŁA WAF? (MODELE)</h3>
+            <ul>
+                <li><strong>Negative Security Model (Czarna Lista):</strong> "Wpuszczam wszystkich, z wyjątkiem znanych ataków". <br><em>Np. Blokuj, jeśli w URL jest `UNION SELECT`.</em></li>
+                <li><strong>Positive Security Model (Biała Lista):</strong> "Blokuję wszystkich, z wyjątkiem znanych dobrych zapytań". <br><em>Np. Parametr ID musi być liczbą.</em></li>
+            </ul>
+            <p>Popularne WAFy: <strong>Cloudflare, AWS WAF, ModSecurity</strong>.</p>
+        </div>
+    </section>
+
+    <!-- 2. WIRTUALNE ŁATANIE -->
+    <section>
+        <h2>> VIRTUAL PATCHING 🩹</h2>
+        <p>To supermoc Blue Teamu. Wyobraź sobie, że znajdujesz krytyczne SQL Injection w piątek o 17:00. Deweloperzy naprawią to dopiero w poniedziałek. Co robisz?</p>
+
+        <div class="card">
+            <h3>ROZWIĄZANIE</h3>
+            <p>Wdrażasz regułę na WAF-ie, która blokuje konkretny payload atakujący ten jeden endpoint.</p>
+            <div class="log-box">
+                # Reguła ModSecurity (uproszczona):<br>
+                SecRule ARGS:id "@rx [\d]+'.*" \<br>
+                "id:1001,deny,status:403,msg:'Virtual Patch for SQLi'"
+            </div>
+            <p>Błąd w kodzie nadal istnieje, ale <strong>nikt nie może do niego dotrzeć</strong>. Kupiłeś czas.</p>
+        </div>
+    </section>
+
+    <!-- 3. MONITORING & LOGI -->
+    <section>
+        <h2>> NIE BĄDŹ ŚLEPY (LOGI)</h2>
+        <p>Najgorszy atak to ten, o którym nie wiesz. Musisz wiedzieć, jak wyglądają ślady hakera w logach.</p>
+
+        <div class="card">
+            <h3>PRZYKŁAD: LOGI SKANOWANIA</h3>
+            <div class="log-box">
+                <span class="log-time">[12:00:01]</span> <span class="log-ip">192.168.1.5</span> GET /admin <span class="log-attack">403</span><br>
+                <span class="log-time">[12:00:02]</span> <span class="log-ip">192.168.1.5</span> GET /backup <span class="log-attack">404</span><br>
+                <span class="log-time">[12:00:02]</span> <span class="log-ip">192.168.1.5</span> GET /.env <span class="log-attack">200</span> <span style="color:red"><-- ALARM!</span>
+            </div>
+            <p><strong>Analiza:</strong> Widzisz szybkie żądania z jednego IP, które generują błędy (4xx). To rekonesans (Dirbuster/FFUF). Sukces (200) na pliku `.env` to incydent krytyczny.</p>
+        </div>
+
+        <div class="card">
+            <h3>SIEM (Security Information and Event Management)</h3>
+            <p>Nikt nie czyta logów ręcznie. Narzędzia SIEM (np. Splunk, ELK) zbierają logi i automatycznie wykrywają anomalie (np. "Użytkownik z Polski zalogował się 5 minut po nieudanym logowaniu z Chin").</p>
+        </div>
+    </section>
+
+    <!-- 4. WAF BYPASS -->
+    <section>
+        <h2>> DLACZEGO WAF TO NIE WSZYSTKO?</h2>
+        <p>WAF nie naprawia błędu, tylko go zasłania. Hakerzy stosują techniki <strong>Ewazji (Evasion)</strong>.</p>
+        <div class="card">
+            <ul>
+                <li><strong>Obfuscation:</strong> WAF blokuje `<script>`, ale przepuszcza `<<script>script>`.</li>
+                <li><strong>IP Rotation:</strong> Haker używa proxy, żeby ominąć blokadę IP (Rate Limiting).</li>
+                <li><strong>Direct Access:</strong> Jeśli WAF chroni domenę `firma.pl`, haker może znaleźć bezpośrednie IP serwera (Origin Server) i uderzyć tam, omijając WAF (Cloudflare Bypass).</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- CHECKLIST -->
+    <section>
+        <h2>BLUE TEAM CHECKLIST 🛡️</h2>
+        <div class="card checklist-card">
+            <div class="checklist-item">
+                <span class="check-icon">🛡️</span>
+                <div><strong>Rate Limiting:</strong> Czy masz włączone limity zapytań? To zabija większość automatów skanujących.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">🛡️</span>
+                <div><strong>Blokowanie Origin:</strong> Skonfiguruj serwer tak, by przyjmował połączenia TYLKO z adresów IP Twojego WAF-a (np. Cloudflare), a odrzucał resztę internetu.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">🛡️</span>
+                <div><strong>Alarmy 5xx:</strong> Nagły wzrost błędów 500 (Internal Server Error) często oznacza, że ktoś testuje SQL Injection i "psuje" zapytania.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>🎓 WERYFIKACJA WIEDZY OBRONNEJ</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | Moduł 27</p>
+    </footer>
+</div>
+
+<!-- DANE DO QUIZU -->
+<script>
+    const quizData = [
+        {
+            question: "Czym różni się WAF (Web Application Firewall) od tradycyjnego Firewalla sieciowego?",
+            options: [
+                "WAF jest droższy.",
+                "Tradycyjny firewall działa na warstwie sieci (IP/Porty), a WAF działa na warstwie aplikacji (HTTP), rozumiejąc i analizując treść zapytań (SQL, XSS).",
+                "WAF chroni tylko przed wirusami.",
+                "Tradycyjny firewall blokuje WiFi."
+            ],
+            correct: 1,
+            explanation: "Zwykły firewall przepuści atak SQL Injection, bo idzie on na dozwolony port 80. WAF zajrzy do środka pakietu, zobaczy 'SELECT *' i go zablokuje."
+        },
+        {
+            question: "Co to jest 'Virtual Patching'?",
+            options: [
+                "Aktualizacja Windowsa.",
+                "Tymczasowe zabezpieczenie aplikacji poprzez wdrożenie reguły na WAF, która blokuje próby wykorzystania znanej podatności, zanim programiści naprawią kod źródłowy.",
+                "Instalacja gry wirtualnej.",
+                "Naprawa sprzętu zdalnie."
+            ],
+            correct: 1,
+            explanation: "To kluczowa strategia w korporacjach. Pozwala natychmiast 'zatkać dziurę' na produkcji, dając deweloperom czas na przygotowanie poprawki w kodzie."
+        },
+        {
+            type: "scenario",
+            question: "Widzisz w logach: 1000 zapytań na sekundę z jednego adresu IP, każde celuje w inny plik (admin.php, login.php, test.php) i kończy się błędem 404. Co się dzieje?",
+            options: [
+                "To normalny ruch użytkowników.",
+                "To atak typu Fuzzing/Directory Busting (automatyczny rekonesans). Atakujący szuka ukrytych zasobów.",
+                "Serwer się zepsuł.",
+                "To indeksowanie przez Google."
+            ],
+            correct: 1,
+            explanation: "Taki wzorzec (dużo requestów, dużo 404, jedno IP) to sygnatura narzędzi typu Dirb, Gobuster czy FFUF."
+        },
+        {
+            question: "Dlaczego samo posiadanie WAF nie gwarantuje bezpieczeństwa?",
+            options: [
+                "Bo WAF zużywa dużo prądu.",
+                "Ponieważ WAF działa w oparciu o reguły, które można ominąć (Bypass/Ewazja), a także nie chroni przed błędami logiki biznesowej (np. IDOR).",
+                "Bo WAF działa tylko w dzień.",
+                "Bo WAF nie chroni przed DDoS."
+            ],
+            correct: 1,
+            explanation: "WAF to tylko sito. Sprytny haker znajdzie sposób, by prześlizgnąć się przez oczka (np. inne kodowanie znaków). Ponadto WAF nie wie, czy Jan powinien mieć dostęp do faktury Marka (IDOR)."
+        },
+        {
+            question: "Co to jest 'False Positive' w kontekście WAF?",
+            options: [
+                "Pozytywny wynik testu na wirusa.",
+                "Sytuacja, gdy WAF blokuje legalnego użytkownika, uznając jego działanie za atak (np. blokuje przesyłanie kodu SQL w tutorialu programistycznym).",
+                "Niewykrycie ataku.",
+                "Błąd logowania."
+            ],
+            correct: 1,
+            explanation: "To zmora administratorów. Zbyt restrykcyjny WAF może zablokować klientów sklepu. Dlatego strojenie (Tuning) WAF jest tak ważne."
+        },
+        {
+            type: "scenario",
+            question: "Twoja firma używa Cloudflare (WAF). Atakujący poznał jednak prawdziwy adres IP Twojego serwera (Origin IP). Jakie jest ryzyko?",
+            options: [
+                "Żadne.",
+                "Krytyczne. Atakujący może połączyć się bezpośrednio z Twoim serwerem, całkowicie omijając ochronę Cloudflare (Cloudflare Bypass).",
+                "Może zmienić DNS.",
+                "Może wykraść certyfikat."
+            ],
+            correct: 1,
+            explanation: "To częsty błąd konfiguracyjny. Serwer powinien być skonfigurowany tak, aby odrzucać (DROP) wszelki ruch, który NIE pochodzi z adresów IP Cloudflare."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 28: Supply Chain Security - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Cargo Amber (Dependencies / Warning) */
+        :root {
+            --accent: #ffc107;
+            --accent-glow: rgba(255, 193, 7, 0.3);
+            --pkg: #00e5ff;
+        }
+        
+        .dep-tree {
+            font-family: monospace;
+            background: #111;
+            padding: 15px;
+            border: 1px solid #333;
+            color: #888;
+        }
+        .dep-main { color: #fff; font-weight: bold; }
+        .dep-bad { color: #ff1744; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>SUPPLY CHAIN SECURITY</h1>
+        <p>MODUŁ 28: npm audit, Dependency Confusion i Zatrute Paczki</p>
+    </header>
+
+    <!-- 1. CZYM JEST SUPPLY CHAIN? -->
+    <section>
+        <h2>> PROBLEM GÓRY LODOWEJ</h2>
+        <p>Współczesna aplikacja to 10% Twojego kodu i 90% kodu innych ludzi (biblioteki, frameworki). Nie musisz włamywać się do banku, jeśli włamiesz się do autora biblioteki, której bank używa.</p>
+        
+        <div class="card">
+            <h3>NODE_MODULES TO CZARNA DZIURA</h3>
+            <div class="dep-tree">
+                <span class="dep-main">Twoja_Aplikacja</span><br>
+                ├── react (Zaufana)<br>
+                ├── lodash (Zaufana)<br>
+                │&nbsp;&nbsp;└── <span class="dep-bad">malicious-package (ZATRUTA!)</span><br>
+                └── express (Zaufana)
+            </div>
+            <p><strong>Zagrożenie:</strong> Instalujesz jedną bibliotekę, a ona ciągnie za sobą 100 innych (Transitive Dependencies). Wystarczy, że jedna z nich ma wbudowany koparkę krypto lub Backdoor.</p>
+        </div>
+    </section>
+
+    <!-- 2. RODZAJE ATAKÓW -->
+    <section>
+        <h2>> JAK ONI TO ROBIĄ?</h2>
+
+        <div class="card">
+            <h3>1. TYPOSQUATTING (Literówki)</h3>
+            <p>Haker publikuje paczkę o nazwie łudząco podobnej do popularnej.</p>
+            <ul>
+                <li>Oryginał: <code>npm install react</code></li>
+                <li>Atak: <code>npm install <span class="dep-bad">rceact</span></code></li>
+            </ul>
+            <p>Wystarczy jeden zmęczony programista, który zrobi literówkę, i złośliwy kod ląduje w firmie.</p>
+        </div>
+
+        <div class="card">
+            <h3>2. DEPENDENCY CONFUSION</h3>
+            <p>Firma używa prywatnej biblioteki wewnętrznej o nazwie <code>firma-auth</code>. Haker rejestruje publicznie na npm bibliotekę o <strong>tej samej nazwie</strong>, ale z wyższym numerem wersji (99.9.9).</p>
+            <p><strong>Efekt:</strong> Systemy budowania (CI/CD) często domyślnie pobierają "najnowszą" wersję z publicznego rejestru, zamiast starszej z prywatnego. Haker wchodzi do firmy przez frontowe drzwi.</p>
+        </div>
+
+        <div class="card">
+            <h3>3. PROTESTWARE & HIJACKING</h3>
+            <p>Autor popularnej biblioteki (np. `colors.js`, `faker.js`) celowo psuje swój kod w ramach protestu, albo traci dostęp do konta na rzecz hakera.</p>
+        </div>
+    </section>
+
+    <!-- 3. OBRONA (SCA) -->
+    <section>
+        <h2>> SCA (SOFTWARE COMPOSITION ANALYSIS)</h2>
+        <p>Jako Blue Team musisz wiedzieć, co masz w kodzie. Służą do tego narzędzia SCA.</p>
+
+        <div class="card">
+            <h3>NARZĘDZIA AUDYTU</h3>
+            <ul>
+                <li><code>npm audit</code> / <code>yarn audit</code>: Wbudowane w menedżery pakietów. Sprawdzają znane luki.</li>
+                <li><strong>Snyk / Dependabot:</strong> Automatycznie skanują repozytoria GitHub i tworzą Pull Requesty z poprawkami.</li>
+                <li><strong>OWASP Dependency-Check:</strong> Skaner typu Open Source.</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>SBOM (Software Bill of Materials)</h3>
+            <p>To "lista składników" Twojego oprogramowania. Wymagany standard w wielu branżach (np. medycznej, rządowej). Pozwala w sekundę odpowiedzieć na pytanie: <em>"Czy używamy biblioteki Log4j w wersji podatnej?"</em>.</p>
+        </div>
+    </section>
+
+    <!-- CHECKLIST -->
+    <section>
+        <h2>BLUE TEAM CHECKLIST 🛡️</h2>
+        <div class="card checklist-card">
+            <div class="checklist-item">
+                <span class="check-icon">🛡️</span>
+                <div><strong>Lockfiles:</strong> Zawsze commituj pliki `package-lock.json` lub `yarn.lock`. Gwarantują, że na produkcji zainstaluje się DOKŁADNIE ta sama wersja co u Ciebie.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">🛡️</span>
+                <div><strong>Private Registry Scope:</strong> Skonfiguruj `.npmrc`, aby prywatne paczki (`@firma/auth`) były pobierane TYLKO z prywatnego rejestru.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">🛡️</span>
+                <div><strong>Docker Scan:</strong> Nie używaj obrazów `node:latest`. Używaj konkretnych wersji (`node:16-alpine`) i skanuj je narzędziem `trivy`.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>🎓 WERYFIKACJA WIEDZY OBRONNEJ</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | Moduł 28</p>
+    </footer>
+</div>
+
+<!-- DANE DO QUIZU -->
+<script>
+    const quizData = [
+        {
+            question: "Co to jest 'Supply Chain Attack' w kontekście software'u?",
+            options: [
+                "Atak na dostawcę prądu.",
+                "Atak polegający na zainfekowaniu zewnętrznych bibliotek lub narzędzi używanych przez deweloperów, aby złośliwy kod trafił do aplikacji końcowej.",
+                "Kradzież laptopa kurierowi.",
+                "Blokada łańcucha dostaw sprzętu."
+            ],
+            correct: 1,
+            explanation: "Zamiast atakować twierdzę (Twoją firmę), haker zatruwa studnię (biblioteki open-source), z której ta twierdza pije."
+        },
+        {
+            type: "scenario",
+            question: "Chcesz zainstalować bibliotekę 'requests'. Przez pomyłkę wpisujesz `pip install reqests` (bez 'u'). Instaluje się złośliwa paczka. Jak nazywa się ten atak?",
+            options: [
+                "SQL Injection.",
+                "Typosquatting.",
+                "Dependency Confusion.",
+                "Man in the Middle."
+            ],
+            correct: 1,
+            explanation: "Hakerzy rejestrują setki nazw z popularnymi literówkami, licząc na pośpiech programistów."
+        },
+        {
+            question: "Na czym polega atak 'Dependency Confusion'?",
+            options: [
+                "Na myleniu wersji Javy.",
+                "Na opublikowaniu w publicznym rejestrze (npm/pypi) paczki o takiej samej nazwie jak prywatna paczka firmy, ale z wyższym numerem wersji.",
+                "Na usunięciu zależności.",
+                "Na zawieszeniu menedżera pakietów."
+            ],
+            correct: 1,
+            explanation: "Menedżery pakietów często domyślnie wybierają 'nowszą' wersję. Jeśli haker da wersję 99.0.0, system pobierze złośliwą paczkę z publicznego neta zamiast bezpiecznej z firmowego serwera."
+        },
+        {
+            question: "Dlaczego plik `package-lock.json` (lub `yarn.lock`) powinien być zawsze w repozytorium (git)?",
+            options: [
+                "Żeby repozytorium wyglądało profesjonalnie.",
+                "Ponieważ 'zamraża' on dokładne wersje wszystkich zależności (i ich pod-zależności). Gwarantuje to, że każdy deweloper i serwer produkcyjny ma identyczny, sprawdzony kod.",
+                "To błąd, należy go dodawać do .gitignore.",
+                "Zwiększa szybkość pobierania."
+            ],
+            correct: 1,
+            explanation: "Bez lockfile'a, polecenie `npm install` może pobrać nowszą, potencjalnie zainfekowaną wersję biblioteki, która wyszła 5 minut temu."
+        },
+        {
+            question: "Co to jest SBOM?",
+            options: [
+                "Super Bomb.",
+                "Software Bill of Materials - lista wszystkich komponentów, bibliotek i modułów wchodzących w skład aplikacji.",
+                "Secure Boot on Motherboard.",
+                "Standard Bezpieczeństwa Oprogramowania Mobilnego."
+            ],
+            correct: 1,
+            explanation: "SBOM to 'składniki odżywcze' oprogramowania. Dzięki niemu wiesz, czy Twoja aplikacja zawiera bibliotekę, o której właśnie trąbią w wiadomościach (np. Log4j)."
+        },
+        {
+            question: "Jakie narzędzie służy do automatycznego skanowania kontenerów Docker pod kątem podatności?",
+            options: [
+                "Photoshop.",
+                "Trivy (lub Clair / Docker Scan).",
+                "Wireshark.",
+                "Nmap."
+            ],
+            correct: 1,
+            explanation: "Obrazy Dockerowe to też 'paczki'. Często bazują na starym Linuxie z tysiącem dziur. Trivy pozwala to wykryć przed wdrożeniem."
+        },
+        {
+            type: "scenario",
+            question: "Narzędzie `npm audit` zgłasza krytyczną podatność w bibliotece, której używasz tylko do testów (devDependencies). Czy musisz panikować?",
+            options: [
+                "Tak, trzeba zamknąć firmę.",
+                "Nie, ale należy to naprawić. Podatność w devDependencies nie wpływa na bezpieczeństwo aplikacji produkcyjnej (nie trafia do klienta), ale może zagrozić komputerowi programisty.",
+                "Ignoruję, to błąd.",
+                "Usuwam testy."
+            ],
+            correct: 1,
+            explanation: "Ocena ryzyka! Jeśli dziura jest w narzędziu do budowania, haker może przejąć Twój laptop, ale nie serwer produkcyjny. To ważne rozróżnienie."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

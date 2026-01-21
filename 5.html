@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 05: SOP & CORS - Kurs Pentestera</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Neon Orange (Boundaries/Firewalls) */
+        :root {
+            --accent: #ff6d00;
+            --accent-glow: rgba(255, 109, 0, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>SOP & CORS</h1>
+            <p>MODUŁ 05: Granice Internetu i Wyciek Danych Cross-Origin</p>
+        </header>
+
+        <!-- 1. SOP - PRAWO -->
+        <section>
+            <h2>> SOP (SAME-ORIGIN POLICY)</h2>
+            <p>SOP to najważniejsza reguła bezpieczeństwa w przeglądarce. To "Wielki Mur", który oddziela strony od
+                siebie.</p>
+
+            <div class="card">
+                <h3>ZASADA DZIAŁANIA</h3>
+                <p>Skrypt z domeny <code>A.com</code> <strong>nie może odczytać</strong> danych z domeny
+                    <code>B.com</code>, chyba że domena B wyraźnie na to pozwoli.</p>
+                <p>Gdyby SOP nie istniał, wchodząc na <code>smieszne-koty.pl</code>, skrypt JS na tej stronie mógłby
+                    odczytać Twoje maile z otwartej w tle karty <code>gmail.com</code>.</p>
+            </div>
+
+            <div class="card">
+                <h3>CO TO JEST "ORIGIN"?</h3>
+                <p>Dwie strony mają ten sam "Origin" (pochodzenie) tylko wtedy, gdy zgadzają się 3 elementy:</p>
+                <ol>
+                    <li><strong>Protokół</strong> (np. https)</li>
+                    <li><strong>Domena</strong> (np. bank.com)</li>
+                    <li><strong>Port</strong> (np. 443)</li>
+                </ol>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="2">Porównanie z: <span style="color:#fff">https://bank.com</span></th>
+                    </tr>
+                    <tr>
+                        <th>Adres URL</th>
+                        <th>Wynik SOP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>https://bank.com/konto</code></td>
+                        <td><span class="secure">SAME ORIGIN</span> (Zgodne)</td>
+                    </tr>
+                    <tr>
+                        <td><code>http://bank.com</code></td>
+                        <td><span class="status-badge s-5xx">CROSS ORIGIN</span> (Inny protokół)</td>
+                    </tr>
+                    <tr>
+                        <td><code>https://api.bank.com</code></td>
+                        <td><span class="status-badge s-5xx">CROSS ORIGIN</span> (Inna subdomena)</td>
+                    </tr>
+                    <tr>
+                        <td><code>https://bank.com:8080</code></td>
+                        <td><span class="status-badge s-5xx">CROSS ORIGIN</span> (Inny port)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- 2. CORS - WYJĄTEK -->
+        <section>
+            <h2>> CORS (CROSS-ORIGIN RESOURCE SHARING)</h2>
+            <p>Czasami <code>frontend.com</code> MUSI pobrać dane z <code>api.backend.com</code>. SOP na to nie pozwala.
+                Wtedy wkracza CORS.</p>
+            <p>CORS to system "wizowy". Serwer API wysyła nagłówki mówiące przeglądarce: <br><em>"Spoko, pozwalam
+                    domenie frontend.com czytać moje dane"</em>.</p>
+
+            <div class="card">
+                <h3>KLUCZOWE NAGŁÓWKI (ODPOWIEDŹ SERWERA)</h3>
+                <ul>
+                    <li><code>Access-Control-Allow-Origin: https://zaufana.com</code> <br>
+                        Tylko ta jedna domena może czytać odpowiedź.</li>
+
+                    <li><code>Access-Control-Allow-Credentials: true</code> <br>
+                        Pozwala przesyłać ciasteczka (sesję) w zapytaniu Cross-Origin. <strong>Krytyczne dla
+                            bezpieczeństwa.</strong></li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 3. ATAKI -->
+        <section>
+            <h2>> BŁĘDY KONFIGURACJI CORS</h2>
+            <p>Pentesterzy szukają sytuacji, w których serwer jest "zbyt miły" i pozwala czytać dane atakującemu.</p>
+
+            <div class="card">
+                <h3>SCENARIUSZ 1: REFLECTED ORIGIN (Odbicie lustrzane)</h3>
+                <p>Programista był leniwy i napisał skrypt, który kopiuje nagłówek <code>Origin</code> z żądania do
+                    nagłówka <code>Access-Control-Allow-Origin</code> w odpowiedzi.</p>
+
+                <pre><code><span class="comment"># Żądanie atakującego (złośliwa strona)</span>
+GET /api/private-data HTTP/1.1
+Host: bank.com
+Origin: https://evil-hacker.com
+
+<span class="comment"># Odpowiedź serwera (BŁĄD!)</span>
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: https://evil-hacker.com
+Access-Control-Allow-Credentials: true</code></pre>
+
+                <p><strong>Skutek:</strong> Haker może stworzyć stronę, która w tle odpyta bank ofiary, a przeglądarka
+                    pozwoli hakerowi odczytać saldo konta (bo serwer na to "zezwolił").</p>
+            </div>
+
+            <div class="card">
+                <h3>SCENARIUSZ 2: WILDCARD Z CREDENTIALS</h3>
+                <p>Konfiguracja:</p>
+                <pre><code>Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true</code></pre>
+                <p>To teoretycznie "święty graal", ale nowoczesne przeglądarki <strong>blokują</strong> takie
+                    połączenie. Nie można używać gwiazdki (<code>*</code>) razem z <code>true</code>. Jednak często
+                    zdarza się w starych aplikacjach lub narzędziach mobilnych.</p>
+            </div>
+
+            <div class="card">
+                <h3>SCENARIUSZ 3: NULL ORIGIN</h3>
+                <p>Niektóre serwery blokują obce domeny, ale pozwalają na <code>null</code>. Atakujący może użyć
+                    sandboxed iframe: <code>&lt;iframe sandbox="allow-scripts ...</code>, który wysyła żądanie z
+                    <code>Origin: null</code>. Jeśli serwer to akceptuje -> Wyciek danych.</p>
+            </div>
+        </section>
+
+        <!-- CHECKLIST -->
+        <section>
+            <h2>CHECKLISTA / RED FLAGS</h2>
+            <div class="card checklist-card">
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Reflected Origin:</strong> Zmień nagłówek <code>Origin</code> w Burp Suite na
+                        <code>evil.com</code>. Jeśli serwer odpowie <code>Allowed: evil.com</code> -> Zgłoś to!</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Credentials: true:</strong> Jeśli serwer pozwala na `Credentials: true` przy luźnym
+                        Origin, można ukraść dane zalogowanego użytkownika.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Regex na domenach:</strong> Programiści często używają słabych wyrażeń regularnych. Np.
+                        pozwalają na `bank.com`, ale przez pomyłkę wpuszczają też `bank.com.evil.com`.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QUIZ -->
+        <section id="quiz-section">
+            <h2>🎓 WERYFIKACJA WIEDZY</h2>
+            <div id="quiz-container"></div>
+        </section>
+
+        <footer>
+            <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Kurs Pentestera | Moduł 05</p>
+        </footer>
+    </div>
+
+    <!-- DANE DO QUIZU -->
+    <script>
+        const quizData = [
+            {
+                question: "Co składa się na definicję 'Origin' (Pochodzenia)?",
+                options: [
+                    "Tylko domena (np. google.com).",
+                    "Domena i adres IP.",
+                    "Protokół, Domena i Port.",
+                    "Kraj pochodzenia serwera."
+                ],
+                correct: 2,
+                explanation: "Aby dwa adresy były 'Same Origin', muszą mieć ten sam protokół (http/https), tę samą domenę i ten sam port."
+            },
+            {
+                question: "Co domyślnie blokuje SOP (Same-Origin Policy)?",
+                options: [
+                    "Wysyłanie żądań do innego serwera.",
+                    "Odczytywanie odpowiedzi z innego serwera przez skrypty JS.",
+                    "Ładowanie obrazków z innego serwera.",
+                    "Używanie CSS z innego serwera."
+                ],
+                correct: 1,
+                explanation: "To kluczowe rozróżnienie: SOP zazwyczaj pozwala WYSYŁAĆ żądania (dlatego działa CSRF), ale zabrania ODCZYTYWAĆ odpowiedzi (dlatego chroni dane przed wyciekiem)."
+            },
+            {
+                type: "scenario",
+                question: "Testujesz API. W odpowiedzi widzisz nagłówek 'Access-Control-Allow-Origin: *'. Czy to zawsze jest błąd?",
+                options: [
+                    "Tak, to zawsze krytyczna podatność.",
+                    "Nie. Jeśli API udostępnia dane publiczne (np. prognozę pogody) i nie wymaga logowania, to jest to poprawne.",
+                    "Tak, przeglądarki tego nie obsługują.",
+                    "Zależy od wersji Apache."
+                ],
+                correct: 1,
+                explanation: "Gwiazdka (*) jest bezpieczna TYLKO dla danych publicznych. Jeśli endpoint zwraca dane prywatne, musi wymagać uwierzytelnienia, a wtedy gwiazdka jest zabroniona."
+            },
+            {
+                type: "scenario",
+                question: "Wysyłasz żądanie z nagłówkiem 'Origin: https://hacker.com'. Serwer odpowiada: 'Access-Control-Allow-Origin: https://hacker.com' oraz 'Access-Control-Allow-Credentials: true'. Co to oznacza?",
+                options: [
+                    "Serwer jest dobrze zabezpieczony.",
+                    "To podatność 'CORS Misconfiguration'. Możesz stworzyć stronę, która ukradnie dane zalogowanego użytkownika.",
+                    "To błąd 500.",
+                    "To atak SQL Injection."
+                ],
+                correct: 1,
+                explanation: "To klasyczny przykład 'Reflected Origin'. Serwer ślepo ufa temu, co wyślesz w nagłówku Origin i pozwala Twojej domenie na dostęp do ciasteczek (Credentials)."
+            },
+            {
+                question: "Do czego służy żądanie 'Preflight' (metoda OPTIONS) w CORS?",
+                options: [
+                    "Do sprawdzenia, czy serwer działa.",
+                    "Przeglądarka wysyła je automatycznie przed właściwym żądaniem (np. PUT/DELETE lub z customowymi nagłówkami), aby zapytać serwer o zgodę.",
+                    "Służy do kasowania cache.",
+                    "To wirus."
+                ],
+                correct: 1,
+                explanation: "Złożone żądania (np. JSON z Content-Type application/json) wymagają zgody serwera PRZED wysłaniem właściwych danych. Przeglądarka robi to sama."
+            },
+            {
+                question: "Czy 'http://example.com' i 'https://example.com' to ten sam Origin?",
+                options: [
+                    "Tak, domena jest ta sama.",
+                    "Nie, różnią się protokołem.",
+                    "Tak, jeśli port jest ten sam.",
+                    "Zależy od przeglądarki."
+                ],
+                correct: 1,
+                explanation: "Protokół jest częścią definicji Origin. HTTP i HTTPS są traktowane jako dwa różne światy."
+            },
+            {
+                question: "Co oznacza nagłówek 'Access-Control-Allow-Credentials: true'?",
+                options: [
+                    "Zezwala na dostęp do kamery.",
+                    "Pozwala na wysyłanie hasła w URL.",
+                    "Pozwala przeglądarce dołączyć ciasteczka (sesję) i nagłówki autoryzacyjne do żądania Cross-Origin.",
+                    "Wymusza zmianę hasła."
+                ],
+                correct: 2,
+                explanation: "Bez tego nagłówka, nawet jeśli serwer pozwoli na dostęp domenowy, przeglądarka nie wyśle ciasteczek sesyjnych, więc żądanie będzie anonimowe."
+            },
+            {
+                type: "scenario",
+                question: "Programista pozwolił na dostęp CORS dla domeny `bank.com`. Atakujący zarejestrował domenę `bank.com.evil.com`. Jeśli serwer używa słabego regexa, czy atak się uda?",
+                options: [
+                    "Nie, SOP to zablokuje.",
+                    "Tak, jeśli regex sprawdza tylko czy ciąg zawiera 'bank.com' lub kończy się na nim w niewłaściwy sposób.",
+                    "Nie, DNS to zablokuje.",
+                    "Tylko w Internet Explorerze."
+                ],
+                correct: 1,
+                explanation: "Błędy parsowania Origin są częste. Regex typu `Origin.endsWith('bank.com')` przepuści `evilbank.com` lub `bank.com.hacker.site`."
+            },
+            {
+                question: "Jaka jest relacja między SOP a XSS?",
+                options: [
+                    "SOP chroni przed XSS.",
+                    "XSS pozwala obejść SOP. Skrypt wstrzyknięty przez XSS wykonuje się w kontekście domeny ofiary ('Same Origin'), więc ma dostęp do wszystkiego.",
+                    "Nie mają ze sobą nic wspólnego.",
+                    "SOP blokuje XSS."
+                ],
+                correct: 1,
+                explanation: "To jest sedno sprawy! XSS jest tak groźny, bo 'oszukuje' przeglądarkę. Skrypt hakera działa JAKO strona banku, więc SOP go nie blokuje."
+            },
+            {
+                question: "Kiedy przeglądarka blokuje dostęp do odpowiedzi przy błędzie CORS?",
+                options: [
+                    "Żądanie w ogóle nie wychodzi z przeglądarki.",
+                    "Żądanie jest wysyłane, serwer je przetwarza i odpowiada, ale przeglądarka UKRYWA treść odpowiedzi przed skryptem JS.",
+                    "Serwer odrzuca połączenie.",
+                    "Komputer się wyłącza."
+                ],
+                correct: 1,
+                explanation: "Ważne dla pentesterów: Błąd CORS w konsoli nie oznacza, że request nie dotarł. Często akcja na serwerze się wykonała (np. przelew), ale JS nie zobaczył potwierdzenia."
+            }
+        ];
+    </script>
+
+    <script src="quiz.js"></script>
+
+</body>
+
+</html>

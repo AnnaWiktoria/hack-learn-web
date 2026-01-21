@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FINAL EXAM - Hack & Learn: Web Edition</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: PLATINUM / HOLOGRAPHIC (Mastery) */
+        :root {
+            --accent: #ffffff;
+            --accent-glow: rgba(255, 255, 255, 0.5);
+            --success: #00e676;
+            --danger: #ff1744;
+            --holo: linear-gradient(135deg, #00c6ff, #0072ff, #ff007f, #6b00ff);
+        }
+        
+        body {
+            background-color: #050505;
+            /* Subtelna siatka */
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        .boss-header {
+            border: 1px solid #fff;
+            padding: 40px;
+            text-align: center;
+            background: rgba(10, 10, 10, 0.9);
+            margin-bottom: 40px;
+            box-shadow: 0 0 50px var(--accent-glow);
+            position: relative;
+            overflow: hidden;
+            border-radius: 2px;
+        }
+
+        /* Holograficzna poświata */
+        .boss-header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--holo);
+            opacity: 0.1;
+            z-index: 0;
+        }
+
+        .boss-title {
+            font-size: 3.5rem;
+            color: #fff;
+            text-transform: uppercase;
+            font-weight: 900;
+            letter-spacing: 10px;
+            margin: 0;
+            text-shadow: 0 0 20px #fff;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .boss-subtitle {
+            color: #ccc;
+            margin-top: 15px; 
+            font-family: var(--font-mono);
+            font-weight: bold;
+            letter-spacing: 2px;
+            position: relative;
+            z-index: 1;
+            text-transform: uppercase;
+        }
+
+        .final-badge {
+            display: inline-block;
+            margin-top: 20px;
+            border: 1px solid #fff;
+            padding: 5px 15px;
+            font-size: 0.8rem;
+            color: #fff;
+            font-family: var(--font-mono);
+            position: relative;
+            z-index: 1;
+            background: rgba(255,255,255,0.1);
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div class="boss-header">
+        <h1 class="boss-title">CERTYFIKACJA</h1>
+        <p class="boss-subtitle">WEB PENTEST OPERATOR</p>
+        <div class="final-badge">FINAL EXAM v1.0</div>
+    </div>
+
+    <section>
+        <h2>> CEL MISJI</h2>
+        <p>To ostateczny sprawdzian. Obejmuje materiał z wszystkich 28 lekcji. Nie ma tu miejsca na błędy.</p>
+        <div class="card" style="border-color: #fff;">
+            <h3>PARAMETRY EGZAMINU</h3>
+            <ul>
+                <li><strong>Liczba pytań:</strong> 25</li>
+                <li><strong>Próg zaliczenia:</strong> 85% (22/25)</li>
+                <li><strong>Zakres:</strong> HTTP, Injection, Auth, Logic, Recon, Audit, Defense.</li>
+                <li><strong>Nagroda:</strong> Tytuł Operatora i wieczna chwała w `localStorage`.</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>⚔️ ROZPOCZNIJ SYMULACJĘ</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | FINAL</p>
+    </footer>
+</div>
+
+<!-- DANE DO EGZAMINU -->
+<script>
+    const quizData = [
+        // --- FUNDAMENTALS (HTTP/HEADERS) ---
+        {
+            question: "Podczas rekonesansu zauważasz, że endpoint `/admin` zwraca status 403, ale `/admin/login` zwraca 200. Jaki wniosek wyciągasz?",
+            options: [
+                "Serwer jest wyłączony.",
+                "Katalog admina jest chroniony, ale plik logowania jest dostępny publicznie. To pozwala na próbę ataku Brute-Force na logowanie.",
+                "To błąd konfiguracji DNS.",
+                "Endpoint nie istnieje."
+            ],
+            correct: 1,
+            explanation: "Różnica w kodach statusu (403 vs 200/404) to podstawowa technika mapowania aplikacji (Fingerprinting) bez dostępu do kodu."
+        },
+        {
+            question: "Jaki nagłówek HTTP skutecznie chroni przed atakiem Clickjacking?",
+            options: [
+                "Strict-Transport-Security",
+                "X-Frame-Options: DENY (lub CSP frame-ancestors)",
+                "Access-Control-Allow-Origin",
+                "Content-Type: nosniff"
+            ],
+            correct: 1,
+            explanation: "Clickjacking polega na załadowaniu strony w niewidocznej ramce (iframe). X-Frame-Options blokuje możliwość ramkowania strony przez obce domeny."
+        },
+        
+        // --- INJECTION (SQLi, XSS, COMMAND) ---
+        {
+            type: "scenario",
+            question: "Wpisujesz w pole wyszukiwania: `' OR 1=1 --`. Strona zwraca listę wszystkich użytkowników w bazie. Jaka to podatność i jaki ma Impact?",
+            options: [
+                "XSS (High Impact).",
+                "SQL Injection (Critical Impact - możliwy wyciek całej bazy danych).",
+                "Command Injection (Critical Impact).",
+                "HTML Injection (Low Impact)."
+            ],
+            correct: 1,
+            explanation: "To klasyczny payload SQLi. Operator `OR 1=1` sprawia, że warunek zapytania jest zawsze prawdziwy, co zmusza bazę do zwrócenia wszystkich rekordów."
+        },
+        {
+            type: "scenario",
+            question: "Znalazłeś Reflected XSS. Dlaczego w raporcie CVSS parametr 'User Interaction' (UI) musi być 'Required'?",
+            options: [
+                "Bo XSS wymaga logowania.",
+                "Bo XSS Reflected nie działa automatycznie - wymaga, aby ofiara kliknęła w złośliwy link przygotowany przez atakującego.",
+                "To błąd, UI powinno być None.",
+                "Bo przeglądarka pyta o zgodę."
+            ],
+            correct: 1,
+            explanation: "Wymóg interakcji (socjotechniki) obniża nieco wynik CVSS, ale nie zmienia faktu, że XSS jest groźny (kradzież sesji, phishing)."
+        },
+        {
+            question: "Widzisz kod PHP: `system('ping ' . $_GET['ip']);`. Jakiego znaku użyjesz, aby wykonać dodatkową komendę (RCE) na Linuxie?",
+            options: [
+                "Średnik (;)",
+                "Kropka (.)",
+                "Myślnik (-)",
+                "Slash (/)"
+            ],
+            correct: 0,
+            explanation: "Średnik (;) w powłoce Linuxa to separator poleceń. `ping 1.1.1.1; id` wykona ping, a potem komendę `id`."
+        },
+
+        // --- AUTH & LOGIC (IDOR, JWT, RACE) ---
+        {
+            type: "scenario",
+            question: "Jesteś Userem A (id: 100). Wysyłasz żądanie `GET /invoices/101` (należące do Usera B) i otrzymujesz PDF z fakturą. Co to za błąd?",
+            options: [
+                "BOLA (Broken Object Level Authorization) / IDOR.",
+                "Mass Assignment.",
+                "CSRF.",
+                "SSRF."
+            ],
+            correct: 0,
+            explanation: "Serwer zweryfikował, że jesteś zalogowany, ale nie sprawdził, czy masz uprawnienia do konkretnego obiektu (faktury 101)."
+        },
+        {
+            question: "Dlaczego algorytm 'None' w JWT jest niebezpieczny?",
+            options: [
+                "Bo token wygasa zbyt szybko.",
+                "Bo pozwala usunąć podpis cyfrowy (Signature), zmienić dane w Payloadzie (np. na admina) i serwer przyjmie taki sfałszowany token.",
+                "Bo nie szyfruje danych.",
+                "Bo zajmuje dużo miejsca."
+            ],
+            correct: 1,
+            explanation: "Algorytm 'None' to historyczny błąd w specyfikacji JWT. Backend nie powinien nigdy akceptować niesygnowanych tokenów."
+        },
+        {
+            question: "Co to jest Race Condition typu TOCTOU?",
+            options: [
+                "Błąd w tłumaczeniu strony.",
+                "Time-Of-Check to Time-Of-Use. Błąd, gdy stan systemu zmienia się pomiędzy sprawdzeniem warunku (np. 'czy masz kupon?') a wykonaniem akcji (np. 'użyj kuponu').",
+                "Zbyt wolne łącze internetowe.",
+                "Błąd zegara systemowego."
+            ],
+            correct: 1,
+            explanation: "Wielowątkowość może być zgubna. Jeśli dwa żądania wpadną w mikrosekundowym odstępie, oba mogą 'przejść' sprawdzenie warunku, zanim pierwszy zaktualizuje bazę."
+        },
+
+        // --- SERVER & FILES (LFI, SSRF, UPLOAD) ---
+        {
+            type: "scenario",
+            question: "Funkcja 'Wgraj z URL' pozwala podać adres obrazka. Wpisujesz `http://169.254.169.254/latest/meta-data/`. Co atakujesz?",
+            options: [
+                "Lokalną bazę SQL.",
+                "Chmurę (AWS/GCP/Azure). Próbujesz wykraść klucze dostępowe do instancji chmurowej poprzez atak SSRF.",
+                "Serwer DNS.",
+                "Przeglądarkę administratora."
+            ],
+            correct: 1,
+            explanation: "To klasyczny wektor SSRF w chmurze. Adres 169.254.169.254 (Metadata Service) jest dostępny tylko z wnętrza serwera wirtualnego."
+        },
+        {
+            question: "Jak zamienić LFI (Local File Inclusion) w RCE (Remote Code Execution) przy użyciu logów serwera?",
+            options: [
+                "Usunąć logi.",
+                "Log Poisoning. Wstrzyknąć kod PHP do logów (np. przez User-Agent), a następnie zainkludować plik logu przez podatność LFI.",
+                "Zmienić nazwę pliku logu.",
+                "Nie da się."
+            ],
+            correct: 1,
+            explanation: "Jeśli serwer wykona `include('/var/log/access.log')`, a w logu znajduje się tekst `<?php system('id'); ?>`, kod zostanie uruchomiony."
+        },
+        {
+            question: "Serwer sprawdza `Content-Type` przy uploadzie plików. Jak ominąć to zabezpieczenie?",
+            options: [
+                "Zmienić rozszerzenie pliku.",
+                "Przechwycić żądanie w Proxy (Burp) i zmienić nagłówek `Content-Type` na `image/jpeg`, wysyłając jednocześnie kod PHP.",
+                "Skompresować plik.",
+                "Wgrać plik w nocy."
+            ],
+            correct: 1,
+            explanation: "`Content-Type` jest wysyłany przez klienta (przeglądarkę), więc haker ma nad nim pełną kontrolę i może kłamać."
+        },
+
+        // --- MODERN WEB & XXE ---
+        {
+            question: "Dlaczego trzymanie tokena JWT w `localStorage` jest ryzykowne?",
+            options: [
+                "Bo zajmuje pamięć RAM.",
+                "Ponieważ każdy kod JavaScript na stronie (w tym XSS) ma dostęp do `localStorage`. Token może zostać wykradziony.",
+                "Bo token wygasa po zamknięciu karty.",
+                "Bo nie działa w trybie Incognito."
+            ],
+            correct: 1,
+            explanation: "Dlatego zaleca się `HttpOnly Cookies`. Są one niewidoczne dla silnika JavaScript, co uodparnia sesję na kradzież przez XSS."
+        },
+        {
+            question: "Co to jest XXE (XML External Entity)?",
+            options: [
+                "Nowy standard HTML.",
+                "Atak na parser XML, pozwalający na wczytanie zewnętrznych plików (LFI) lub wykonanie żądań HTTP (SSRF) poprzez definicję encji SYSTEM.",
+                "Błąd w plikach Excel.",
+                "Szyfrowanie XML."
+            ],
+            correct: 1,
+            explanation: "Jeśli parser XML przetwarza DTD i encje zewnętrzne, haker może zdefiniować `<!ENTITY x SYSTEM 'file:///etc/passwd'>`."
+        },
+        
+        // --- RECON & AUDIT (SCOPE, CVSS) ---
+        {
+            type: "scenario",
+            question: "Podczas audytu znajdujesz krytyczny błąd na serwerze produkcyjnym, który nie był ujęty w dokumencie Scope (Zakres). Co robisz?",
+            options: [
+                "Eksploruję dalej, klient będzie wdzięczny.",
+                "Przerywam testy na tym zasobie. Dokumentuję znalezisko, ale nie ingeruję głębiej. Zgłaszam to klientowi jako 'Out of Scope finding'.",
+                "Wrzucam na Twittera.",
+                "Naprawiam błąd sam."
+            ],
+            correct: 1,
+            explanation: "Etyka i Prawo. Atakowanie zasobów poza zakresem umowy to przestępstwo, nawet w dobrej wierze. Zgłoś, ale nie dotykaj."
+        },
+        {
+            question: "Co to jest plik `.env` i dlaczego jego wyciek jest krytyczny?",
+            options: [
+                "Plik stylów CSS.",
+                "Plik ze zmiennymi środowiskowymi. Często zawiera klucze API, hasła do bazy danych i sekrety w plain-text.",
+                "Plik tymczasowy.",
+                "Plik graficzny."
+            ],
+            correct: 1,
+            explanation: "Wyciek `.env` to 'Keys to the Kingdom'. Często pozwala na całkowite przejęcie projektu."
+        },
+        {
+            question: "Jakie narzędzie służy do automatycznego skanowania zależności (Supply Chain) pod kątem znanych podatności?",
+            options: [
+                "Photoshop.",
+                "npm audit / Snyk / OWASP Dependency-Check.",
+                "Wireshark.",
+                "Nmap."
+            ],
+            correct: 1,
+            explanation: "SCA (Software Composition Analysis) to podstawa bezpieczeństwa nowoczesnych aplikacji, które składają się w 90% z gotowych bibliotek."
+        },
+
+        // --- BLUE TEAM (DEFENSE) ---
+        {
+            question: "Co to jest 'Allowlist' (Biała Lista) w kontekście walidacji danych?",
+            options: [
+                "Lista zablokowanych hakerów.",
+                "Podejście, w którym akceptujemy TYLKO dane zgodne ze ściśle określonym wzorcem (np. tylko litery a-z), a wszystko inne odrzucamy.",
+                "Lista dozwolonych haseł.",
+                "To samo co Blocklist."
+            ],
+            correct: 1,
+            explanation: "Allowlist jest jedynym bezpiecznym podejściem. Blocklist (czarna lista złych znaków) zawsze zostanie ominięta przez kreatywnego hakera."
+        },
+        {
+            question: "Co daje flaga 'Preload' w nagłówku HSTS?",
+            options: [
+                "Szybsze ładowanie strony.",
+                "Wymusza HTTPS nawet przy PIERWSZYM połączeniu z domeną (dzięki wbudowanej liście w przeglądarce), eliminując ryzyko ataku SSL Strip.",
+                "Blokuje XSS.",
+                "Wymusza zmianę hasła."
+            ],
+            correct: 1,
+            explanation: "Standardowy HSTS działa dopiero po pierwszym odwiedzeniu strony (Trust on First Use). Preload chroni od samego początku."
+        },
+        {
+            question: "Co to jest WAF (Web Application Firewall)?",
+            options: [
+                "Antywirus na komputerze.",
+                "Firewall działający w warstwie aplikacji (HTTP), który analizuje treść żądań i blokuje ataki takie jak SQL Injection czy XSS.",
+                "Fizyczna zapora ogniowa.",
+                "Narzędzie do monitoringu CPU."
+            ],
+            correct: 1,
+            explanation: "WAF rozumie protokół HTTP. Widzi parametry, ciasteczka i nagłówki, dzięki czemu może zablokować złośliwy payload, zanim dotrze do aplikacji."
+        },
+        {
+            type: "scenario",
+            question: "Musisz wdrożyć CSP, ale aplikacja używa skryptów inline (`<script>...`). Jak to zrobić bezpiecznie bez użycia `unsafe-inline`?",
+            options: [
+                "Nie da się.",
+                "Użyć mechanizmu 'Nonce' (kryptograficzny, jednorazowy token) dodawanego do nagłówka i tagu skryptu.",
+                "Przenieść serwer do innego kraju.",
+                "Zablokować JavaScript."
+            ],
+            correct: 1,
+            explanation: "Nonce pozwala 'wybielić' konkretne bloki kodu inline, zachowując ochronę przed wstrzyknięciem nieautoryzowanego skryptu przez hakera."
+        },
+
+        // --- ADVANCED (SMUGGLING & LOGIC) ---
+        {
+            question: "Na czym polega atak HTTP Request Smuggling?",
+            options: [
+                "Na przemycaniu plików.",
+                "Na desynchronizacji między Frontendem a Backendem w interpretacji długości żądania (CL vs TE), co pozwala 'przemycić' żądanie do kolejki.",
+                "Na szyfrowaniu nagłówków.",
+                "Na ataku na DNS."
+            ],
+            correct: 1,
+            explanation: "Gdy Frontend myśli, że żądanie się skończyło, a Backend myśli, że trwa dalej (lub odwrotnie), fragment danych zostaje zinterpretowany jako początek kolejnego żądania."
+        },
+        {
+            type: "scenario",
+            question: "Aplikacja pozwala na zmianę emaila bez podania obecnego hasła. Nie ma tokena CSRF. Jaki łańcuch ataku (Chain) możesz zbudować?",
+            options: [
+                "Tylko spamowanie maili.",
+                "Account Takeover. Tworzysz stronę pułapkę (CSRF), która zmienia email ofiary na Twój. Następnie robisz reset hasła na swój email.",
+                "DDoS.",
+                "SQL Injection."
+            ],
+            correct: 1,
+            explanation: "Brak CSRF przy zmianie danych tożsamości to krytyczny błąd. Haker może przejąć konto, zmuszając przeglądarkę ofiary do zmiany adresu email."
+        },
+        {
+            question: "Dlaczego sekwencyjne ID (1, 2, 3...) są złym pomysłem w publicznym API?",
+            options: [
+                "Są trudne do zapamiętania.",
+                "Umożliwiają trywialną enumerację zasobów (scraping bazy danych). Lepiej używać UUID.",
+                "Zajmują dużo miejsca w bazie.",
+                "Powodują błędy 500."
+            ],
+            correct: 1,
+            explanation: "Jeśli ID są przewidywalne, a występuje błąd IDOR, haker może w pętli pobrać dane wszystkich użytkowników serwisu."
+        },
+        {
+            question: "Jaka jest najważniejsza zasada przy pisaniu raportu z audytu?",
+            options: [
+                "Używać jak najwięcej slangu.",
+                "Raport musi być zrozumiały zarówno dla Zarządu (ryzyko biznesowe), jak i Deweloperów (techniczne kroki naprawy).",
+                "Raport musi być krótki.",
+                "Raport musi być w formacie .txt."
+            ],
+            correct: 1,
+            explanation: "Raport to most między technologią a biznesem. Jeśli klient nie zrozumie ryzyka, nie zapłaci za naprawę. Jeśli dev nie zrozumie błędu, nie naprawi go."
+        },
+        {
+            question: "Co robisz po zakończeniu audytu na środowisku produkcyjnym?",
+            options: [
+                "Idę na piwo.",
+                "Przeprowadzam 'Clean-up': usuwam konta testowe, wgrane pliki, webshelle i dane testowe z bazy. Potwierdzam usunięcie danych wrażliwych z mojego dysku.",
+                "Zostawiam backdoora na przyszłość.",
+                "Publikuję wyniki w sieci."
+            ],
+            correct: 1,
+            explanation: "Zostawienie bałaganu (lub co gorsza webshella) po audycie to naruszenie bezpieczeństwa klienta. Profesjonalista sprząta po sobie."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

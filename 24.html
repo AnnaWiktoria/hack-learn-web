@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 24: Reporting & CVSS - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Deliverable Blue (Standards / Documentation) */
+        :root {
+            --accent: #448aff;
+            --accent-glow: rgba(68, 138, 255, 0.3);
+        }
+        
+        .cvss-box {
+            background: #111;
+            border: 1px solid #333;
+            padding: 10px;
+            font-family: monospace;
+            margin: 10px 0;
+            color: #ccc;
+        }
+        .cvss-score { font-size: 1.5rem; font-weight: bold; }
+        .score-critical { color: #ff0000; }
+        .score-high { color: #ff5722; }
+        .score-medium { color: #ff9800; }
+        .score-low { color: #ffeb3b; }
+        
+        .report-bad { border-left: 3px solid var(--danger); padding-left: 10px; opacity: 0.7; }
+        .report-good { border-left: 3px solid var(--success); padding-left: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>RAPORTOWANIE & CVSS</h1>
+        <p>MODUŁ 24: Matematyka Ryzyka, Język Biznesowy i Struktura "Findingu"</p>
+    </header>
+
+    <!-- 1. CVSS - MATEMATYKA -->
+    <section>
+        <h2>> CVSS: STANDARD OCENY RYZYKA</h2>
+        <p>Nie oceniamy ryzyka "na oko". Używamy standardu <strong>CVSS 3.1</strong> (Common Vulnerability Scoring System). Wynik to liczba od 0.0 do 10.0.</p>
+        
+        <div class="card">
+            <h3>WEKTOR ATAKU (VECTOR STRING)</h3>
+            <p>Każdy błąd opisuje ciąg znaków. Rozszyfrujmy go:</p>
+            <div class="cvss-box">CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H</div>
+            <ul>
+                <li><strong>AV (Attack Vector):</strong> N = Network (zdalnie), L = Local (wymaga dostępu fizycznego).</li>
+                <li><strong>PR (Privileges Required):</strong> N = None (każdy), L = Low (zalogowany), H = High (admin).</li>
+                <li><strong>UI (User Interaction):</strong> N = None (serwer sam wykonuje), R = Required (ofiara musi kliknąć - np. XSS, CSRF).</li>
+                <li><strong>C/I/A (Confidentiality, Integrity, Availability):</strong> Wpływ na Poufność, Integralność, Dostępność (H - High, L - Low, N - None).</li>
+            </ul>
+            <p><strong>Wynik powyższego wektora?</strong> <span class="cvss-score score-critical">9.8 CRITICAL</span> (Zdalne RCE bez logowania).</p>
+        </div>
+    </section>
+
+    <!-- 2. STRUKTURA RAPORTU -->
+    <section>
+        <h2>> JAK PISAĆ FINDINGI?</h2>
+        <p>Dobry opis błędu składa się z 5 elementów. Porównajmy amatora z profesjonalistą.</p>
+
+        <div class="card">
+            <h3>❌ AMATOR (Hacker Slang)</h3>
+            <div class="report-bad">
+                <strong>Tytuł:</strong> Macie dziurę XSS lol<br>
+                <strong>Opis:</strong> Wpisałem skrypt i wyskoczył alert. Naprawcie to.<br>
+                <strong>Impact:</strong> Hacked.
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>✅ PROFESJONALISTA (Audit Language)</h3>
+            <div class="report-good">
+                <strong>Tytuł:</strong> Reflected Cross-Site Scripting (XSS) in Search Bar<br>
+                <strong>CVSS:</strong> 6.1 (Medium) - AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N<br>
+                <strong>Opis:</strong> Parametr `q` w endpointcie `/search` nie jest poprawnie sanityzowany. Wstrzyknięcie tagu `script` powoduje jego wykonanie.<br>
+                <strong>Impact (Biznesowy):</strong> Atakujący może przejąć sesję użytkownika (Account Takeover) lub wyłudzić dane, wysyłając ofierze złośliwy link.<br>
+                <strong>Remediation:</strong> Zastosować Output Encoding (HTML Entities) oraz wdrożyć Content-Security-Policy (CSP).
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. DO KOGO PISZESZ? -->
+    <section>
+        <h2>> EXECUTIVE vs TECHNICAL</h2>
+        <p>Raport czytają dwie grupy ludzi. Musisz zadowolić obie.</p>
+
+        <div class="card">
+            <h3>1. EXECUTIVE SUMMARY (Dla Zarządu/CEO)</h3>
+            <p>Oni nie wiedzą, co to XSS. Interesuje ich:</p>
+            <ul>
+                <li>Czy nasze pieniądze są bezpieczne?</li>
+                <li>Czy dane klientów są bezpieczne?</li>
+                <li>Ile błędów naprawić "na wczoraj"?</li>
+            </ul>
+            <p><em>Język: "Ryzyko utraty reputacji", "Niezgodność z RODO", "Możliwość przestoju sklepu".</em></p>
+        </div>
+
+        <div class="card">
+            <h3>2. TECHNICAL DETAILS (Dla Deweloperów)</h3>
+            <p>Oni muszą to naprawić. Potrzebują:</p>
+            <ul>
+                <li><strong>Reproduction Steps:</strong> Krok po kroku (1. Wejdź tu, 2. Wklej to). Jeśli dev nie może powtórzyć błędu, zamknie zgłoszenie jako "Can't Reproduce".</li>
+                <li><strong>HTTP Request:</strong> Zrzut z Burp Suite.</li>
+                <li><strong>Kod naprawczy:</strong> Konkretny przykład (np. "Użyj funkcji `htmlspecialchars()`").</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- CHECKLIST -->
+    <section>
+        <h2>AUDIT CHECKLIST: DELIVERY 📦</h2>
+        <div class="card checklist-card">
+            <div class="checklist-item">
+                <span class="check-icon">📋</span>
+                <div><strong>Proof of Concept (PoC):</strong> Czy dołączyłeś screen lub request, który udowadnia błąd? (Bez usuwania danych klienta!).</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">📋</span>
+                <div><strong>Ocena ryzyka:</strong> Czy nie zawyżyłeś oceny? (Self-XSS to nie Critical. Logout CSRF to nie High). Bądź uczciwy.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">📋</span>
+                <div><strong>Rekomendacje:</strong> Czy Twoja porada "Fix it" jest wykonalna? Lepiej napisać: "Zaktualizuj bibliotekę X do wersji Y".</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>🎓 AUDYT: RAPORTOWANIE</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | Moduł 24</p>
+    </footer>
+</div>
+
+<!-- DANE DO QUIZU -->
+<script>
+    const quizData = [
+        {
+            question: "Co oznacza skrót CVSS?",
+            options: [
+                "Common Vulnerability Scoring System",
+                "Critical Value Security Standard",
+                "Computer Virus Severity Score",
+                "Cyber Vulnerability Safe System"
+            ],
+            correct: 0,
+            explanation: "To otwarty standard branżowy służący do oceny dotkliwości (severity) podatności bezpieczeństwa komputerowego."
+        },
+        {
+            type: "scenario",
+            question: "Znalazłeś RCE (Remote Code Execution). Atak nie wymaga logowania (Auth: None) ani interakcji użytkownika (UI: None). Jaka będzie ocena CVSS?",
+            options: [
+                "Medium (~5.0)",
+                "High (~7.5)",
+                "Critical (9.0 - 10.0)",
+                "Low (~3.0)"
+            ],
+            correct: 2,
+            explanation: "To definicja 'Critical'. Atakujący może przejąć serwer zdalnie, natychmiast i bez niczyjej pomocy. Wektor to zazwyczaj CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H."
+        },
+        {
+            question: "Czym różni się 'Executive Summary' od 'Technical Details' w raporcie?",
+            options: [
+                "Executive jest po angielsku, Technical po polsku.",
+                "Executive skupia się na ryzyku biznesowym i finansowym dla zarządu. Technical zawiera kroki reprodukcji i kod dla programistów.",
+                "Executive jest dłuższe.",
+                "Technical jest tylko dla hakerów."
+            ],
+            correct: 1,
+            explanation: "CEO nie obchodzi 'brak flagi HttpOnly'. Obchodzi go 'możliwość przejęcia kont klientów'. Dewelopera nie obchodzi biznes, tylko 'w którym pliku jest błąd'."
+        },
+        {
+            type: "scenario",
+            question: "Oceniasz Reflected XSS. Dlaczego metryka UI (User Interaction) w CVSS musi być ustawiona na 'Required' (R)?",
+            options: [
+                "Bo XSS wymaga, aby ofiara kliknęła w link.",
+                "Bo XSS wymaga logowania.",
+                "Bo XSS działa tylko w UI.",
+                "To błąd, UI powinno być None."
+            ],
+            correct: 0,
+            explanation: "Reflected XSS nie dzieje się 'sam z siebie'. Atakujący musi socjotechnicznie zmusić ofiarę do interakcji (kliknięcia). To obniża wynik CVSS (zazwyczaj do poziomu Medium/High)."
+        },
+        {
+            question: "Co oznacza element 'Remediation' (Rekomendacja) w findingu?",
+            options: [
+                "Opis jak zhakować stronę.",
+                "Instrukcję dla deweloperów, jak naprawić błąd lub zminimalizować ryzyko (Mitigation).",
+                "Podpis audytora.",
+                "Wycenę naprawy."
+            ],
+            correct: 1,
+            explanation: "Klient płaci nie tylko za znalezienie dziury, ale przede wszystkim za wiedzę, jak ją załatać. Rekomendacja musi być konkretna i techniczna."
+        },
+        {
+            type: "scenario",
+            question: "Znalazłeś błąd SQL Injection, ale wymaga on bycia zalogowanym jako Administrator. Jak ocenisz 'Privileges Required' (PR)?",
+            options: [
+                "None (N)",
+                "Low (L)",
+                "High (H)",
+                "System (S)"
+            ],
+            correct: 2,
+            explanation: "Skoro musisz być adminem, to PR:High. To drastycznie obniża ryzyko błędu (bo haker musi najpierw włamać się na admina, żeby użyć SQLi)."
+        },
+        {
+            question: "Dlaczego 'Reproduction Steps' są najważniejszą częścią sekcji technicznej?",
+            options: [
+                "Bo zajmują dużo miejsca w raporcie.",
+                "Bo jeśli deweloper nie będzie potrafił odtworzyć błędu na swoim komputerze, uzna, że błąd nie istnieje i go nie naprawi.",
+                "Bo tak wymaga prawo.",
+                "Bo to dowód dla policji."
+            ],
+            correct: 1,
+            explanation: "Złota zasada zgłaszania błędów: 'It works on my machine' nie wystarczy. Musisz dać instrukcję 'idiotoodporną'."
+        },
+        {
+            type: "scenario",
+            question: "Znalazłeś otwarty port 80. Czy to jest podatność (Finding)?",
+            options: [
+                "Tak, Critical.",
+                "Tak, Low.",
+                "Nie. Otwarty port to funkcja, nie błąd. Podatnością byłoby, gdyby usługa na tym porcie była przestarzała lub źle skonfigurowana. W raporcie można to dać jako 'Info' (zmniejszenie powierzchni ataku).",
+                "Zależy od pogody."
+            ],
+            correct: 2,
+            explanation: "Audytor musi odróżniać 'cechę' od 'błędu'. Serwer WWW musi mieć otwarty port 80/443. Zgłaszanie tego jako błąd podważa Twoje kompetencje."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

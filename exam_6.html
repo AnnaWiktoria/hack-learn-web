@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Egzamin: Moduł 6 - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: BLUE TEAM (Defense & Stability) */
+        :root {
+            --accent: #00b0ff; /* Electric Blue */
+            --accent-glow: rgba(0, 176, 255, 0.4);
+            --success: #00e676; /* Secure Green */
+            --danger: #ff1744;
+        }
+        
+        body {
+            /* Tło "Secure Hexagon" */
+            background-color: #05101a;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(0, 176, 255, 0.05) 0%, transparent 60%),
+                linear-gradient(30deg, #0a1520 12%, transparent 12.5%, transparent 87%, #0a1520 87.5%, #0a1520),
+                linear-gradient(150deg, #0a1520 12%, transparent 12.5%, transparent 87%, #0a1520 87.5%, #0a1520),
+                linear-gradient(30deg, #0a1520 12%, transparent 12.5%, transparent 87%, #0a1520 87.5%, #0a1520),
+                linear-gradient(150deg, #0a1520 12%, transparent 12.5%, transparent 87%, #0a1520 87.5%, #0a1520),
+                linear-gradient(60deg, #081018 25%, transparent 25.5%, transparent 75%, #081018 75%, #081018),
+                linear-gradient(60deg, #081018 25%, transparent 25.5%, transparent 75%, #081018 75%, #081018);
+            background-size: 80px 140px;
+            background-position: 0 0, 0 0, 40px 70px, 40px 70px, 0 0, 40px 70px;
+        }
+
+        .boss-header {
+            border: 2px solid var(--accent);
+            padding: 30px;
+            text-align: center;
+            background: rgba(0, 20, 40, 0.9);
+            margin-bottom: 40px;
+            box-shadow: 0 0 40px var(--accent-glow);
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+        }
+
+        .boss-title {
+            font-size: 3rem;
+            color: #fff;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 4px;
+            margin: 0;
+            text-shadow: 0 0 15px var(--accent);
+        }
+        
+        .boss-subtitle {
+            color: var(--success);
+            margin-top: 15px; 
+            font-family: var(--font-mono);
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        /* Pasek postępu defensywnego */
+        .defense-bar {
+            height: 4px;
+            width: 100%;
+            background: #333;
+            margin-top: 20px;
+            position: relative;
+        }
+        .defense-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            box-shadow: 0 0 10px var(--success);
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div class="boss-header">
+        <h1 class="boss-title">EGZAMIN KOŃCOWY</h1>
+        <p class="boss-subtitle">/// POZIOM 6: BLUE TEAM & HARDENING ///</p>
+        <div class="defense-bar"><div class="defense-fill"></div></div>
+    </div>
+
+    <section>
+        <h2>> STATUS SYSTEMU OBRONNEGO</h2>
+        <p>Test wiedzy z lekcji 25-28. Tematyka: Bezpieczna architektura, CSP, Walidacja danych, WAF i Bezpieczeństwo łańcucha dostaw.</p>
+        <div class="card" style="border-color: var(--success);">
+            <h3>ZASADY GRY</h3>
+            <ul>
+                <li><strong>Liczba pytań:</strong> 15</li>
+                <li><strong>Wymagany wynik:</strong> 80% (12/15)</li>
+                <li><strong>Zakres:</strong> Defense in Depth, Secure Coding, Monitoring, Supply Chain Attacks.</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>🛡️ AKTYWUJ PROTOKOŁY OBRONNE</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | EXAM 06</p>
+    </footer>
+</div>
+
+<!-- DANE DO EGZAMINU -->
+<script>
+    const quizData = [
+        // --- SECURE ARCHITECTURE (L25) ---
+        {
+            question: "Co oznacza koncepcja 'Defense in Depth' (Obrona w głąb)?",
+            options: [
+                "Zainstalowanie antywirusa.",
+                "Stosowanie wielu, niezależnych warstw zabezpieczeń (np. walidacja w kodzie + CSP + WAF), aby przełamanie jednej bariery nie oznaczało kompromitacji systemu.",
+                "Ukrywanie serwerów w bunkrze.",
+                "Szyfrowanie dysków."
+            ],
+            correct: 1,
+            explanation: "To fundament bezpieczeństwa. Jeśli programista popełni błąd (np. XSS), nagłówek CSP zablokuje wykonanie skryptu. Jeśli CSP zawiedzie, WAF może zablokować atak."
+        },
+        {
+            type: "scenario",
+            question: "Twój zespół chce używać skryptów inline (`<script>...`) w HTML, ale chcesz wdrożyć silne CSP. Jakie jest bezpieczne rozwiązanie?",
+            options: [
+                "Użyć dyrektywy `unsafe-inline`.",
+                "Zrezygnować z CSP.",
+                "Użyć mechanizmu 'Nonce' (kryptograficznego tokena), dodając go do nagłówka CSP i do każdego tagu `<script>`.",
+                "Użyć `unsafe-eval`."
+            ],
+            correct: 2,
+            explanation: "Nonce (`number used once`) pozwala serwerowi wskazać przeglądarce, które konkretnie bloki kodu są zaufane, bez otwierania furtki dla wszystkich skryptów inline."
+        },
+        {
+            question: "Co daje flaga 'Preload' w nagłówku HSTS (Strict-Transport-Security)?",
+            options: [
+                "Szybsze ładowanie grafik.",
+                "Gwarantuje, że nawet PIERWSZE połączenie użytkownika z domeną (np. wpisanie 'bank.com') zostanie wymuszone po HTTPS, chroniąc przed atakiem SSL Strip.",
+                "Blokuje ataki DDoS.",
+                "Wymusza zmianę hasła."
+            ],
+            correct: 1,
+            explanation: "Bez preloadu, pierwsze zapytanie jest nieszyfrowane (podatne na MiTM). Z preloadem, przeglądarka ma 'wbite na twardo', że ta strona działa tylko po HTTPS."
+        },
+
+        // --- INPUT VALIDATION (L26) ---
+        {
+            question: "Dlaczego podejście 'Allowlist' (Biała Lista) jest lepsze niż 'Blocklist' (Czarna Lista) przy walidacji danych?",
+            options: [
+                "Allowlist jest szybsza.",
+                "Blocklist próbuje przewidzieć wszystkie złe znaki (co jest niemożliwe), a Allowlist akceptuje tylko znany, bezpieczny wzorzec (np. tylko litery i cyfry).",
+                "Allowlist zużywa mniej pamięci.",
+                "Blocklist jest przestarzała."
+            ],
+            correct: 1,
+            explanation: "Hakerzy zawsze znajdą sposób na obejście czarnej listy (np. `<scr script ipt>`). Biała lista odrzuca wszystko, czego nie zna, co jest drastycznie bezpieczniejsze."
+        },
+        {
+            question: "Co to jest 'Output Encoding' (Escaping) i przed czym chroni?",
+            options: [
+                "Szyfrowanie bazy danych.",
+                "Zamiana znaków specjalnych (np. < > ' \") na ich bezpieczne odpowiedniki (np. `&lt;`), aby przeglądarka traktowała je jako tekst, a nie kod. Chroni przed XSS.",
+                "Kompresja plików.",
+                "Ukrywanie kodu PHP."
+            ],
+            correct: 1,
+            explanation: "To najskuteczniejsza obrona przed XSS. Przeglądarka wyświetli znaczek `<`, ale nie potraktuje go jako początku tagu HTML."
+        },
+        {
+            type: "scenario",
+            question: "Programista waliduje formularz tylko w JavaScript po stronie przeglądarki. Czy to wystarczy?",
+            options: [
+                "Tak, to standard.",
+                "Nie. Walidacja Client-Side służy tylko UX (wygodzie). Atakujący może wyłączyć JS lub wysłać żądanie bezpośrednio do API (np. przez Burp), omijając te zabezpieczenia.",
+                "Tak, jeśli używa Reacta.",
+                "Zależy od serwera."
+            ],
+            correct: 1,
+            explanation: "Złota zasada: Nigdy nie ufaj klientowi. Każda reguła biznesowa musi być sprawdzona na serwerze (Backendzie)."
+        },
+
+        // --- WAF & MONITORING (L27) ---
+        {
+            question: "Co to jest 'Virtual Patching'?",
+            options: [
+                "Aktualizacja Windowsa.",
+                "Wdrożenie reguły na WAF (Web Application Firewall), która blokuje próby wykorzystania konkretnej luki w aplikacji, zanim deweloperzy naprawią kod źródłowy.",
+                "Naprawa wirtualnej maszyny.",
+                "Restart serwera."
+            ],
+            correct: 1,
+            explanation: "To technika 'kupowania czasu'. Jeśli masz dziurę SQLi, a naprawa kodu zajmie tydzień, reguła na WAF może zablokować atak natychmiast."
+        },
+        {
+            type: "scenario",
+            question: "WAF zablokował legalnego użytkownika, który próbował wysłać fragment kodu SQL na forum programistycznym. Jak nazywa się to zjawisko?",
+            options: [
+                "True Positive.",
+                "False Positive (Fałszywy Alarm).",
+                "False Negative.",
+                "Błąd 404."
+            ],
+            correct: 1,
+            explanation: "WAF zadziałał 'zbyt dobrze'. Zablokował ruch, który wyglądał jak atak, ale nim nie był. To największe wyzwanie w konfiguracji WAF."
+        },
+        {
+            question: "Twoja firma używa Cloudflare. Atakujący poznał jednak prawdziwy adres IP Twojego serwera (Origin IP). Jakie jest ryzyko?",
+            options: [
+                "Brak ryzyka.",
+                "Atakujący może połączyć się bezpośrednio z serwerem, całkowicie omijając ochronę WAF (Cloudflare Bypass).",
+                "Może ukraść domenę.",
+                "Może zmienić DNS."
+            ],
+            correct: 1,
+            explanation: "Serwer powinien być skonfigurowany (np. na poziomie iptables), aby przyjmować połączenia TYLKO z zakresów IP Cloudflare."
+        },
+
+        // --- SUPPLY CHAIN (L28) ---
+        {
+            question: "Co to jest atak 'Dependency Confusion'?",
+            options: [
+                "Mylenie wersji Javy.",
+                "Atak polegający na opublikowaniu w publicznym rejestrze (npm/pip) złośliwej paczki o takiej samej nazwie jak prywatna paczka firmy, ale z wyższym numerem wersji.",
+                "Usunięcie bibliotek.",
+                "Atak na GitHub."
+            ],
+            correct: 1,
+            explanation: "Systemy budowania (CI/CD) często domyślnie wybierają 'najnowszą' wersję. Hakerzy to wykorzystują, by wstrzyknąć kod do wewnętrznych projektów firm."
+        },
+        {
+            question: "Dlaczego należy commitować pliki `package-lock.json` lub `yarn.lock` do repozytorium?",
+            options: [
+                "Żeby kod był ładniejszy.",
+                "Aby 'zamrozić' dokładne wersje wszystkich zależności. Gwarantuje to, że na produkcji zainstaluje się dokładnie ten sam kod, co u dewelopera, chroniąc przed nagłymi zmianami w bibliotekach.",
+                "To błąd, należy je ignorować.",
+                "Zwiększa to szybkość pobierania."
+            ],
+            correct: 1,
+            explanation: "Bez lockfile'a, `npm install` może pobrać nowszą wersję biblioteki, która została zainfekowana 5 minut temu. Lockfile to stabilność i bezpieczeństwo."
+        },
+        {
+            question: "Co to jest SBOM (Software Bill of Materials)?",
+            options: [
+                "Rachunek za oprogramowanie.",
+                "Kompletna lista wszystkich komponentów, bibliotek i modułów wchodzących w skład aplikacji. Umożliwia szybkie sprawdzenie, czy używamy podatnej biblioteki (np. Log4j).",
+                "Licencja oprogramowania.",
+                "Lista płac programistów."
+            ],
+            correct: 1,
+            explanation: "W nowoczesnym DevSecOps, SBOM jest kluczowy. Gdy pojawia się nowa luka (0-day), SBOM pozwala w sekundy odpowiedzieć na pytanie: 'Czy jesteśmy podatni?'."
+        },
+        {
+            question: "Na czym polega atak 'Typosquatting' w npm/pip?",
+            options: [
+                "Na włamaniu do npm.",
+                "Na rejestrowaniu paczek o nazwach łudząco podobnych do popularnych bibliotek (np. `rceact` zamiast `react`), licząc na literówkę programisty.",
+                "Na kasowaniu paczek.",
+                "Na zmianie autora paczki."
+            ],
+            correct: 1,
+            explanation: "To inżynieria społeczna na programistach. Wystarczy jeden błąd przy wpisywaniu `npm install`, by zainfekować komputer."
+        },
+        
+        // --- GENERAL HARDENING ---
+        {
+            question: "Dlaczego warto usuwać nagłówki typu `Server: Apache` czy `X-Powered-By: PHP`?",
+            options: [
+                "Aby zaoszczędzić transfer.",
+                "Aby utrudnić rekonesans (Banner Grabbing). Informowanie atakującego o dokładnej wersji oprogramowania ułatwia mu znalezienie gotowych exploitów.",
+                "Bo RODO tego wymaga.",
+                "To nie ma znaczenia."
+            ],
+            correct: 1,
+            explanation: "Security through Obscurity nie jest jedyną ochroną, ale jest ważną warstwą. Nie dawaj hakerowi darmowych informacji."
+        },
+        {
+            question: "Co to jest ReDoS?",
+            options: [
+                "Ponowny atak DoS.",
+                "Regular Expression Denial of Service. Atak wykorzystujący źle napisane wyrażenia regularne, które przy specyficznym wejściu powodują ekstremalne obciążenie procesora.",
+                "Czerwony ekran błędu.",
+                "Atak na sieć Redis."
+            ],
+            correct: 1,
+            explanation: "Złe regexy (tzw. Evil Regex) mogą analizować krótki ciąg znaków przez wiele godzin, skutecznie blokując wątek serwera."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

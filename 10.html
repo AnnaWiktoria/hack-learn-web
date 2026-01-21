@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 10: SSRF - Kurs Pentestera</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Alert Orange (Cloud Danger / Firewall Bypass) */
+        :root {
+            --accent: #ff3d00;
+            --accent-glow: rgba(255, 61, 0, 0.3);
+        }
+
+        .ip-addr {
+            color: #00e5ff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>SSRF (SERVER-SIDE REQUEST FORGERY)</h1>
+            <p>MODUŁ 10: Atakowanie serwera "od środka", Chmura i 169.254.169.254</p>
+        </header>
+
+        <!-- 1. DEFINICJA -->
+        <section>
+            <h2>> WRÓG WEWNĘTRZNY</h2>
+            <p>W ataku XSS zmuszaliśmy przeglądarkę ofiary do działania. W <strong>SSRF</strong> zmuszamy
+                <strong>serwer</strong> do wykonania żądania HTTP tam, gdzie chcemy.</p>
+
+            <div class="card">
+                <h3>JAK TO DZIAŁA?</h3>
+                <p>Wyobraź sobie funkcję "Wgraj z URL" (np. import awatara).</p>
+                <pre><code><span class="comment"># Normalne użycie:</span>
+POST /upload
+url=https://google.com/logo.png
+
+<span class="comment"># Serwer wykonuje w tle:</span>
+curl https://google.com/logo.png</code></pre>
+
+                <p>A co jeśli podasz adres wewnętrzny, do którego Ty nie masz dostępu, ale serwer ma?</p>
+                <pre><code>url=http://localhost/admin</code></pre>
+                <p>Serwer połączy się <strong>sam ze sobą</strong> (loopback interface), omijając firewalle!</p>
+            </div>
+        </section>
+
+        <!-- 2. CELE ATAKU -->
+        <section>
+            <h2>> CO MOŻNA UKRAŚĆ?</h2>
+            <p>SSRF to scyzoryk szwajcarski. Oto główne cele:</p>
+
+            <div class="card">
+                <h3>1. METADANE CHMURY (The Holy Grail) ☁️</h3>
+                <p>Jeśli serwer stoi na AWS, GCP lub Azure, ma dostęp do specjalnego adresu IP.</p>
+                <p><strong>Adres:</strong> <span class="ip-addr">169.254.169.254</span></p>
+                <p>Wysyłając tam żądanie, możesz wyciągnąć <strong>AWS Access Keys</strong> i przejąć całą
+                    infrastrukturę firmy.</p>
+                <pre><code>http://169.254.169.254/latest/meta-data/iam/security-credentials/</code></pre>
+            </div>
+
+            <div class="card">
+                <h3>2. SKANOWANIE SIECI WEWNĘTRZNEJ</h3>
+                <p>Możesz użyć serwera jako proxy do skanowania portów w jego sieci lokalnej.</p>
+                <ul>
+                    <li><code>url=http://192.168.0.1:80</code> -> Odpowiedź 200 (Router admin panel)</li>
+                    <li><code>url=http://192.168.0.2:9200</code> -> Odpowiedź JSON (Elasticsearch bez hasła)</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>3. ODTRZYT PLIKÓW LOKALNYCH</h3>
+                <p>Niektóre biblioteki obsługują inne protokoły niż HTTP.</p>
+                <pre><code>url=file:///etc/passwd</code></pre>
+                <p>Jeśli zadziała -> masz LFI (Local File Inclusion) przez SSRF.</p>
+            </div>
+        </section>
+
+        <!-- 3. OBRONA I BYPASS -->
+        <section>
+            <h2>> BYPASSOWANIE FILTRÓW</h2>
+            <p>Programiści próbują bronić się "czarną listą" (Blacklist), blokując słowo "localhost" lub "127.0.0.1".
+                Hakerzy to uwielbiają.</p>
+
+            <div class="card">
+                <h3>JAK ZAPISAĆ "LOCALHOST" INACZEJ?</h3>
+                <p>Wszystkie poniższe adresy prowadzą do tego samego:</p>
+                <ul>
+                    <li><code>http://127.0.0.1</code> (Standard)</li>
+                    <li><code>http://2130706433</code> (Format dziesiętny)</li>
+                    <li><code>http://0177.0.0.1</code> (Format ósemkowy)</li>
+                    <li><code>http://0.0.0.0</code> (W Linuksie często działa)</li>
+                    <li><code>http://[::]</code> (IPv6)</li>
+                    <li><code>http://localtest.me</code> (Domena DNS wskazująca na 127.0.0.1)</li>
+                </ul>
+            </div>
+
+            <div class="card" style="border-color: var(--success);">
+                <h3>JEDYNA SKUTECZNA OBRONA</h3>
+                <p><strong>Allowlist (Biała lista).</strong> Pozwalaj łączyć się TYLKO z określonymi domenami (np.
+                    <code>*.imgur.com</code>). Wszystko inne blokuj.</p>
+            </div>
+        </section>
+
+        <!-- CHECKLIST -->
+        <section>
+            <h2>CHECKLISTA / RED FLAGS</h2>
+            <div class="card checklist-card">
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Import z URL / Webhooki:</strong> Każde miejsce, gdzie wpisujesz adres URL, a serwer
+                        coś z niego pobiera (obrazek, PDF, dane).</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Generatory PDF:</strong> Często podatne na wstrzyknięcie HTML z iframe wskazującym na
+                        `file:///etc/passwd` lub localhost.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Blind SSRF:</strong> Serwer nie zwraca treści, ale np. odpowiada szybciej (port
+                        otwarty) lub wolniej (port zamknięty/timeout).</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QUIZ -->
+        <section id="quiz-section">
+            <h2>🎓 WERYFIKACJA WIEDZY</h2>
+            <div id="quiz-container"></div>
+        </section>
+
+        <footer>
+            <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Kurs Pentestera | Moduł 10</p>
+        </footer>
+    </div>
+
+    <!-- DANE DO QUIZU -->
+    <script>
+        const quizData = [
+            {
+                question: "Co oznacza skrót SSRF?",
+                options: [
+                    "Secure Socket Request Framework",
+                    "Server-Side Request Forgery",
+                    "Super Secure Remote File",
+                    "Simple Server Reset Function"
+                ],
+                correct: 1,
+                explanation: "Fałszerstwo żądania po stronie serwera. To atak, w którym serwer wykonuje żądanie HTTP zainicjowane przez atakującego."
+            },
+            {
+                question: "Jaka jest główna różnica między CSRF a SSRF?",
+                options: [
+                    "CSRF atakuje serwer, SSRF atakuje klienta.",
+                    "CSRF zmusza przeglądarkę ofiary do wykonania akcji. SSRF zmusza serwer (backend) do wykonania połączenia.",
+                    "Nie ma różnicy.",
+                    "SSRF dotyczy tylko plików tekstowych."
+                ],
+                correct: 1,
+                explanation: "W CSRF 'posłańcem' jest przeglądarka użytkownika. W SSRF 'posłańcem' jest sam serwer aplikacji."
+            },
+            {
+                type: "scenario",
+                question: "Testujesz aplikację na AWS. Znajdujesz SSRF. Jaki adres IP sprawdzasz jako pierwszy?",
+                options: [
+                    "192.168.1.1",
+                    "8.8.8.8",
+                    "169.254.169.254",
+                    "127.0.0.1"
+                ],
+                correct: 2,
+                explanation: "169.254.169.254 to magiczny adres 'Instance Metadata Service'. W chmurze (AWS/Azure/GCP) pozwala on wyciągnąć klucze dostępowe do API chmury."
+            },
+            {
+                question: "Co to jest 'Blind SSRF'?",
+                options: [
+                    "Atak, w którym serwer nie zwraca Ci treści pobranego pliku/strony, ale możesz wnioskować o sukcesie np. na podstawie czasu odpowiedzi.",
+                    "Atak wykonywany z zawiązanymi oczami.",
+                    "Atak na serwer bez ekranu.",
+                    "SSRF, który nie działa."
+                ],
+                correct: 0,
+                explanation: "W Blind SSRF nie widzisz 'etc/passwd' na ekranie. Ale jeśli żądanie do portu 80 trwa 0.1s, a do portu 81 trwa 5s (timeout), to wiesz, że port 80 jest otwarty."
+            },
+            {
+                question: "Jakiego protokołu (schematu URL) można użyć w SSRF, aby odczytać pliki lokalne na serwerze?",
+                options: [
+                    "http://",
+                    "ftp://",
+                    "file://",
+                    "mailto:"
+                ],
+                correct: 2,
+                explanation: "Jeśli biblioteka obsługująca żądania (np. cURL) nie ma zablokowanych protokołów, `file:///etc/passwd` pozwoli odczytać pliki systemowe."
+            },
+            {
+                type: "scenario",
+                question: "Aplikacja blokuje ciąg '127.0.0.1'. Jak możesz spróbować obejść ten filtr, aby dostać się do localhost?",
+                options: [
+                    "Napisać do admina prośbę o odblokowanie.",
+                    "Użyć zapisu alternatywnego, np. '2130706433' (Decimal), '0.0.0.0' lub domeny typu 'localtest.me'.",
+                    "Użyć HTTPS.",
+                    "Zrestartować router."
+                ],
+                correct: 1,
+                explanation: "Filtrowanie po stringach (czarna lista) jest nieskuteczne. Istnieje wiele sposobów zapisu adresu IP, które są interpretowane przez system jako ten sam adres."
+            },
+            {
+                question: "Co to jest 'DNS Rebinding' w kontekście SSRF?",
+                options: [
+                    "Restart serwera DNS.",
+                    "Zaawansowana technika obejścia filtrów. Atakujący używa domeny, która najpierw rozwiązuje się na bezpieczne IP (np. 8.8.8.8), a chwilę później (gdy serwer wykonuje właściwe żądanie) zmienia się na 127.0.0.1.",
+                    "Blokowanie zapytań DNS.",
+                    "Szyfrowanie DNS."
+                ],
+                correct: 1,
+                explanation: "To sposób na obejście 'Time-of-Check to Time-of-Use' (TOCTOU). Serwer sprawdza domenę -> jest OK. Serwer pobiera dane -> domena wskazuje już na localhost."
+            },
+            {
+                question: "Dlaczego SSRF jest groźne dla sieci wewnętrznej firmy?",
+                options: [
+                    "Bo zużywa transfer.",
+                    "Bo pozwala atakującemu z zewnątrz 'przeskoczyć' firewall i skanować serwery wewnętrzne (Intranet), które nie powinny być dostępne z Internetu.",
+                    "Bo zmienia tapetę na serwerze.",
+                    "Nie jest groźne, to tylko bug."
+                ],
+                correct: 1,
+                explanation: "Serwer WWW stoi zazwyczaj w strefie DMZ, ale ma dostęp do bazy danych i innych usług w sieci LAN. SSRF robi z niego bramkę (proxy) dla hakera."
+            },
+            {
+                type: "scenario",
+                question: "Funkcja 'Eksportuj do PDF' pozwala na użycie HTML. Wstrzykujesz: &lt;iframe src='http://169.254.169.254/...'&gt;. W wygenerowanym PDF widzisz klucze AWS. Co to za atak?",
+                options: [
+                    "XSS",
+                    "SQL Injection",
+                    "SSRF (poprzez generator PDF)",
+                    "Buffer Overflow"
+                ],
+                correct: 2,
+                explanation: "Generatory PDF często używają silników przeglądarkowych (headless chrome) działających na serwerze. Jeśli renderują zdalne zasoby, są podatne na SSRF."
+            },
+            {
+                question: "Jaka jest najlepsza metoda obrony przed SSRF?",
+                options: [
+                    "Blokowanie słowa 'localhost'.",
+                    "Allowlist (Biała lista) dozwolonych domen i protokołów oraz wyłączenie obsługi przekierowań.",
+                    "Używanie WAF.",
+                    "Uruchomienie serwera jako root."
+                ],
+                correct: 1,
+                explanation: "Zasada 'Default Deny'. Pozwalaj łączyć się tylko tam, gdzie to biznesowo uzasadnione. Jeśli to niemożliwe - izoluj sieć serwera."
+            }
+        ];
+    </script>
+
+    <script src="quiz.js"></script>
+
+</body>
+
+</html>

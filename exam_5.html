@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Egzamin: Moduł 5 - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: TACTICAL BLUE (Strategy & Professionalism) */
+        :root {
+            --accent: #2979ff; /* Bright Blue */
+            --accent-glow: rgba(41, 121, 255, 0.4);
+            --success: #00e676;
+            --danger: #ff1744;
+        }
+        
+        body {
+            /* Tło "Tactical Map" */
+            background-color: #0b1015;
+            background-image: 
+                linear-gradient(rgba(41, 121, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(41, 121, 255, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        .boss-header {
+            border: 2px solid var(--accent);
+            padding: 30px;
+            text-align: center;
+            background: rgba(10, 20, 40, 0.9);
+            margin-bottom: 40px;
+            box-shadow: 0 0 40px var(--accent-glow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Efekt radaru w nagłówku */
+        .boss-header::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(transparent, var(--accent-glow), transparent 30%);
+            animation: radar 4s linear infinite;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
+        @keyframes radar {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .boss-title {
+            font-size: 3rem;
+            color: #fff;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 6px;
+            margin: 0;
+            text-shadow: 0 0 15px var(--accent);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .boss-subtitle {
+            color: var(--accent);
+            margin-top: 15px; 
+            font-family: var(--font-mono);
+            font-weight: bold;
+            position: relative;
+            z-index: 1;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div class="boss-header">
+        <h1 class="boss-title">EGZAMIN KOŃCOWY</h1>
+        <p class="boss-subtitle">/// POZIOM 5: AUDIT & METHODOLOGY ///</p>
+    </div>
+
+    <section>
+        <h2>> STATUS MISJI</h2>
+        <p>Test wiedzy z lekcji 19-24. Tematyka: Zakres (Scope), Rekonesans, Łańcuchy ataku (Chaining), CVSS i Pisanie raportów.</p>
+        <div class="card" style="border-color: var(--accent);">
+            <h3>ZASADY GRY</h3>
+            <ul>
+                <li><strong>Liczba pytań:</strong> 15</li>
+                <li><strong>Wymagany wynik:</strong> 80% (12/15)</li>
+                <li><strong>Zakres:</strong> Legalność, OSINT, Triage, CVSS 3.1, Struktura raportu.</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>⚔️ ROZPOCZNIJ WALKĘ</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | EXAM 05</p>
+    </footer>
+</div>
+
+<!-- DANE DO EGZAMINU -->
+<script>
+    const quizData = [
+        // --- SCOPE & LEGAL (L21) ---
+        {
+            type: "scenario",
+            question: "Podczas audytu 'Black Box' znajdujesz panel admina, do którego pasuje hasło 'admin123'. Panel znajduje się na subdomenie, która NIE była wymieniona w dokumencie Scope (Zakres). Co robisz?",
+            options: [
+                "Loguję się, żeby potwierdzić impakt, robię zrzut ekranu i zgłaszam klientowi.",
+                "Natychmiast przerywam testy na tym zasobie. Dokumentuję znalezisko (adres URL), ale nie loguję się, ponieważ jest to 'Out of Scope'. Informuję klienta.",
+                "Zmieniam hasło, żeby zabezpieczyć klienta.",
+                "Skanuję dalej, skoro to ich firma, to na pewno chcą wiedzieć."
+            ],
+            correct: 1,
+            explanation: "To najważniejsza zasada etyczna. Wyjście poza Scope to złamanie umowy i potencjalne przestępstwo. Nie dotykaj tego, na co nie masz papieru."
+        },
+        {
+            question: "Czym różni się Pasywny Rekonesans (OSINT) od Aktywnego Skanowania?",
+            options: [
+                "Pasywny jest płatny.",
+                "Pasywny korzysta z ogólnodostępnych źródeł (Google, Shodan, Whois) bez wysyłania pakietów do celu (jest niewykrywalny). Aktywny wchodzi w interakcję z serwerem (Nmap, Dirbuster) i zostawia ślady.",
+                "Aktywny jest legalny bez zgody.",
+                "Pasywny wymaga Kali Linux."
+            ],
+            correct: 1,
+            explanation: "Pasywny rekonesans jest bezpieczny prawnie (przeglądasz publiczne dane). Aktywny rekonesans bez zgody może być potraktowany jako próba ataku."
+        },
+        
+        // --- RECON (L22) ---
+        {
+            question: "Co to jest 'Certificate Transparency' (np. serwis crt.sh) i do czego służy audytorowi?",
+            options: [
+                "Służy do sprawdzania ważności dowodu osobistego.",
+                "To publiczny rejestr wszystkich wydanych certyfikatów SSL. Pozwala znaleźć subdomeny firmy (np. dev.firma.pl, vpn.firma.pl), nawet jeśli nie są one linkowane na stronie głównej.",
+                "Służy do łamania haseł HTTPS.",
+                "To narzędzie do szyfrowania raportów."
+            ],
+            correct: 1,
+            explanation: "To kopalnia wiedzy o 'Shadow IT'. Często znajdujemy tam zapomniane serwery deweloperskie, które mają wystawione certyfikaty SSL."
+        },
+        {
+            type: "scenario",
+            question: "Znajdujesz plik `.env` dostępny publicznie na serwerze produkcyjnym. Jak oceniasz ryzyko (Severity)?",
+            options: [
+                "Info (Informacyjne).",
+                "Low.",
+                "Critical. Plik .env zazwyczaj zawiera klucze API, hasła do bazy danych i sekrety chmury (AWS/Azure) w plain-text.",
+                "Medium."
+            ],
+            correct: 2,
+            explanation: "Wyciek `.env` to zazwyczaj 'Game Over'. Pozwala na całkowite przejęcie infrastruktury, bazy danych i usług zewnętrznych."
+        },
+
+        // --- CHAINING (L23) ---
+        {
+            question: "Na czym polega 'Vulnerability Chaining'?",
+            options: [
+                "Na łączeniu się z serwerem przez proxy.",
+                "Na połączeniu kilku podatności o niskim/średnim ryzyku (np. Self-XSS + CSRF) w jedną sekwencję, która daje krytyczny skutek (np. Account Takeover).",
+                "Na atakowaniu łańcucha dostaw (Supply Chain).",
+                "Na szyfrowaniu blockchain."
+            ],
+            correct: 1,
+            explanation: "Hakerzy rzadko znajdują jedną, wielką dziurę. Częściej znajdują małe pęknięcia, które łączą w całość. To umiejętność poziomu Senior."
+        },
+        {
+            type: "scenario",
+            question: "Masz Open Redirect (przekierowanie na dowolną stronę) oraz logowanie przez OAuth (Google/Facebook). Jak możesz to połączyć?",
+            options: [
+                "Nie da się.",
+                "Mogę użyć Open Redirecta w parametrze `redirect_uri` procesu OAuth, aby wykraść token autoryzacyjny (Access Token) i przejąć konto ofiary.",
+                "Mogę zrobić SQL Injection.",
+                "Mogę wywołać błąd 500."
+            ],
+            correct: 1,
+            explanation: "Dostawca OAuth ufa domenie banku. Open Redirect pozwala 'wyciągnąć' token z zaufanej domeny na serwer atakującego."
+        },
+
+        // --- TRIAGE & ANALYSIS (L19/L20) ---
+        {
+            type: "scenario",
+            question: "Widzisz endpoint `/download?file=report.pdf`. Co sprawdzasz w pierwszej kolejności?",
+            options: [
+                "SQL Injection.",
+                "Path Traversal (LFI) - próbuję zmienić nazwę na `../../../../etc/passwd`.",
+                "XSS.",
+                "Brute Force."
+            ],
+            correct: 1,
+            explanation: "Parametry plikowe to klasyczny wektor LFI. Zanim zaczniesz kombinować, sprawdź najprostszy wektor wyjścia z katalogu."
+        },
+        {
+            question: "Co oznacza termin 'Rabbit Hole' w pentestach?",
+            options: [
+                "Wejście do Darknetu.",
+                "Ślepy zaułek. Element, który wygląda na podatny lub ciekawy, ale pochłania mnóstwo czasu audytora i ostatecznie nie prowadzi do żadnego wyniku.",
+                "Szybki sukces.",
+                "Narzędzie do tunelowania."
+            ],
+            correct: 1,
+            explanation: "Zarządzanie czasem (Time Management) jest kluczowe. Dobry audytor potrafi rozpoznać Rabbit Hole i odpuścić, zamiast tracić 2 dni na 'dziwne zachowanie'."
+        },
+
+        // --- REPORTING & CVSS (L24) ---
+        {
+            question: "Co to jest CVSS?",
+            options: [
+                "Common Vulnerability Scoring System - standard branżowy do liczbowej oceny ryzyka (severity) podatności.",
+                "System kontroli wersji kodu.",
+                "Certyfikat bezpieczeństwa.",
+                "Standard szyfrowania danych."
+            ],
+            correct: 0,
+            explanation: "CVSS pozwala obiektywnie ocenić błąd. Zamiast mówić 'to jest groźne', mówisz 'to ma CVSS 9.8'."
+        },
+        {
+            type: "scenario",
+            question: "Piszesz raport dla Zarządu (Executive Summary). Jakim językiem powinieneś operować?",
+            options: [
+                "Technicznym: 'Brak flagi HttpOnly w ciasteczku sesyjnym'.",
+                "Biznesowym: 'Ryzyko przejęcia kont użytkowników, co może prowadzić do utraty reputacji i kar finansowych'.",
+                "Slangiem hakerskim: 'Pwned database'.",
+                "Kodami błędów HTTP."
+            ],
+            correct: 1,
+            explanation: "Zarząd nie rozumie technologii, rozumie ryzyko i pieniądze. Musisz przetłumaczyć błędy techniczne na skutki biznesowe."
+        },
+        {
+            question: "Dlaczego sekcja 'Reproduction Steps' (Kroki reprodukcji) jest kluczowa dla deweloperów?",
+            options: [
+                "Bo wydłuża raport.",
+                "Bo bez dokładnej instrukcji 'jak wywołać błąd', deweloper może nie być w stanie go powtórzyć i zamknie zgłoszenie jako 'Cannot Reproduce' (Nie działa).",
+                "Bo tak wymaga prawo.",
+                "Bo to dowód dla policji."
+            ],
+            correct: 1,
+            explanation: "Jeśli dev nie umie wywołać błędu u siebie, to go nie naprawi. Twoim zadaniem jest dać mu przepis 'krok po kroku'."
+        },
+        {
+            type: "scenario",
+            question: "Znalazłeś Reflected XSS. Dlaczego w kalkulatorze CVSS parametr 'User Interaction' (UI) musi być ustawiony na 'Required'?",
+            options: [
+                "Bo XSS działa sam z siebie.",
+                "Bo atak wymaga, aby ofiara kliknęła w link przygotowany przez atakującego. Bez akcji użytkownika atak się nie uda.",
+                "Bo XSS wymaga logowania.",
+                "To błąd, powinno być None."
+            ],
+            correct: 1,
+            explanation: "Konieczność interakcji (kliknięcia) obniża wynik CVSS, ponieważ atak nie jest automatyczny. To uczciwa ocena ryzyka."
+        },
+
+        // --- MINDSET ---
+        {
+            question: "Jaka jest najważniejsza cecha dobrego raportu?",
+            options: [
+                "Jest długi (min. 100 stron).",
+                "Jest czytelny, zawiera dowody (PoC), realną ocenę ryzyka i wykonalne rekomendacje naprawcze.",
+                "Używa trudnych słów.",
+                "Zawiera zrzuty bazy danych klientów."
+            ],
+            correct: 1,
+            explanation: "Raport to produkt. Ma pomóc klientowi stać się bezpieczniejszym. Musi być zrozumiały i użyteczny (actionable)."
+        },
+        {
+            question: "Co robisz z danymi wrażliwymi (np. zrzut bazy), które pobrałeś jako dowód (Proof of Concept)?",
+            options: [
+                "Zatrzymuję jako backup.",
+                "Wysyłam mailem do klienta.",
+                "Usuwam je bezpiecznie z mojego dysku natychmiast po zakończeniu audytu i przyjęciu raportu (Clean-up).",
+                "Publikuję w internecie."
+            ],
+            correct: 2,
+            explanation: "Przetrzymywanie danych klienta po zakończeniu zlecenia to naruszenie bezpieczeństwa i RODO. 'Clean-up' jest obowiązkowy."
+        },
+        {
+            type: "scenario",
+            question: "Testujesz na produkcji. Klient zgłasza, że system działa wolno. Co robisz?",
+            options: [
+                "Ignoruję, to nie moja wina.",
+                "Natychmiast wstrzymuję automatyczne skanery. Analizuję logi moich narzędzi, zmniejszam liczbę wątków (threads) i kontaktuję się z klientem.",
+                "Przyspieszam, żeby szybciej skończyć.",
+                "Idę na przerwę."
+            ],
+            correct: 1,
+            explanation: "Dostępność (Availability) to też bezpieczeństwo. Jeśli Twój audyt powoduje DoS, to znaczy, że robisz to źle."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

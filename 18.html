@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 18: HTTP Request Smuggling - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Split-Brain Magenta (Desynchronization) */
+        :root {
+            --accent: #ff00cc;
+            --accent-glow: rgba(255, 0, 204, 0.3);
+        }
+        
+        .header-cl { color: #00e5ff; font-weight: bold; }
+        .header-te { color: #ffd600; font-weight: bold; }
+        .smuggled { color: #ff00cc; font-weight: bold; background: rgba(255,0,204,0.1); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>HTTP REQUEST SMUGGLING</h1>
+        <p>MODUŁ 18: Desynchronizacja, CL.TE vs TE.CL i Przejęcie Konta</p>
+    </header>
+
+    <!-- 1. MECHANIZM -->
+    <section>
+        <h2>> PROBLEM DWÓCH SZEFÓW</h2>
+        <p>W nowoczesnym webie rzadko łączysz się bezpośrednio z serwerem. Twoje żądanie przechodzi przez łańcuch:</p>
+        <div class="card" style="text-align:center; font-family:var(--font-mono);">
+            UŻYTKOWNIK -> <span style="color:#00e5ff">FRONT-END (Load Balancer)</span> -> <span style="color:#ffd600">BACK-END (Server)</span>
+        </div>
+        <p>Problem pojawia się, gdy Frontend i Backend <strong>nie zgadzają się</strong> co do tego, gdzie kończy się jedno żądanie, a zaczyna drugie.</p>
+    </section>
+
+    <!-- 2. CL vs TE -->
+    <section>
+        <h2>> DWA SPOSOBY MIERZENIA</h2>
+        <p>Protokół HTTP/1.1 ma dwie metody określania długości wiadomości:</p>
+        <div class="card">
+            <ul>
+                <li><span class="header-cl">Content-Length (CL):</span> Proste. Liczba bajtów w ciele.</li>
+                <li><span class="header-te">Transfer-Encoding: chunked (TE):</span> Dane wysyłane w kawałkach. Koniec oznacza kawałek o rozmiarze <code>0</code>.</li>
+            </ul>
+            <p><strong>ATAK:</strong> Co jeśli wyślemy OBA nagłówki naraz, ale jeden serwer zignoruje CL, a drugi zignoruje TE? Dochodzi do <strong>desynchronizacji</strong>.</p>
+        </div>
+    </section>
+
+    <!-- 3. TYPY ATAKÓW -->
+    <section>
+        <h2>> SCENARIUSZE CL.TE i TE.CL</h2>
+
+        <div class="card">
+            <h3>1. CL.TE (Front patrzy na CL, Back patrzy na TE)</h3>
+            <p>Frontend widzi Content-Length i myśli, że to jedno duże żądanie. Przesyła je do Backendu. Backend widzi <code>chunked</code> i czyta tylko do pierwszego <code>0</code>.</p>
+            <pre><code>POST / HTTP/1.1
+Host: target.com
+<span class="header-cl">Content-Length: 13</span>
+<span class="header-te">Transfer-Encoding: chunked</span>
+
+0
+
+<span class="smuggled">SMUGGLED</span></code></pre>
+            <p>Backend kończy czytanie na <code>0</code>. Słowo <span class="smuggled">SMUGGLED</span> zostaje w buforze jako początek <strong>KOLEJNEGO</strong> żądania (które może należeć do innego użytkownika!).</p>
+        </div>
+
+        <div class="card">
+            <h3>2. TE.CL (Odwrotnie)</h3>
+            <p>Frontend czyta kawałki (TE), a Backend patrzy na długość (CL). To pozwala "przemycić" złośliwe żądanie wewnątrz kawałka chunked.</p>
+        </div>
+    </section>
+
+    <!-- 4. SKUTKI (IMPACT) -->
+    <section>
+        <h2>> CO MOŻNA ZROBIĆ?</h2>
+        <p>To nie jest tylko błąd teoretyczny. Skutki są krytyczne.</p>
+
+        <div class="card">
+            <h3>BYPASS ZABEZPIECZEŃ</h3>
+            <p>Frontend blokuje dostęp do <code>/admin</code>. Przemycasz żądanie do <code>/admin</code> wewnątrz legalnego żądania. Frontend przepuszcza (bo widzi tylko to pierwsze), a Backend wykonuje to ukryte.</p>
+        </div>
+
+        <div class="card" style="border-color: var(--danger);">
+            <h3>KRADZIEŻ SESJI (POISONING)</h3>
+            <p>Przemycasz żądanie, które "czeka" w buforze Backendu. Gdy <strong>inny użytkownik</strong> wyśle swoje żądanie, zostanie ono doklejone do Twojego.</p>
+            <p>Jeśli Twoje przemycone żądanie to wysłanie komentarza, żądanie ofiary (z jej ciasteczkami!) wyląduje w treści Twojego komentarza.</p>
+        </div>
+    </section>
+
+    <!-- CHECKLIST -->
+    <section>
+        <h2>CHECKLISTA / RED FLAGS</h2>
+        <div class="card checklist-card">
+            <div class="checklist-item">
+                <span class="check-icon">⚠</span>
+                <div><strong>HTTP/1.1 na Load Balancerach:</strong> Smuggling dotyczy głównie HTTP/1.1. HTTP/2 jest znacznie bezpieczniejsze (choć konwersja H2->H1 też bywa dziurawa).</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">⚠</span>
+                <div><strong>Obfuscation TE:</strong> Nagłówki typu `Transfer-Encoding: xchunked` lub zduplikowane `Transfer-Encoding`. Służą do oszukania jednego z serwerów.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">⚠</span>
+                <div><strong>Burp Scanner:</strong> To błąd bardzo trudny do wykrycia ręcznie (wymaga precyzji co do bajta). Używaj wtyczki "HTTP Request Smuggler".</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>🎓 WERYFIKACJA WIEDZY</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | Moduł 18</p>
+    </footer>
+</div>
+
+<!-- DANE DO QUIZU -->
+<script>
+    const quizData = [
+        {
+            question: "Na czym polega istota ataku HTTP Request Smuggling?",
+            options: [
+                "Na przemycaniu narkotyków przez HTTP.",
+                "Na desynchronizacji między serwerem Frontendowym a Backendowym w kwestii tego, gdzie kończy się jedno żądanie, a zaczyna drugie.",
+                "Na szyfrowaniu żądań HTTP.",
+                "Na wysyłaniu zbyt dużych plików."
+            ],
+            correct: 1,
+            explanation: "To błąd interpretacji długości wiadomości. Jeden serwer myśli, że wiadomość się skończyła, a drugi, że jeszcze trwa (lub odwrotnie)."
+        },
+        {
+            question: "Jakie dwa nagłówki HTTP są kluczowe w tym ataku?",
+            options: [
+                "Content-Type i Accept",
+                "Content-Length (CL) i Transfer-Encoding (TE)",
+                "Host i Origin",
+                "Cookie i Set-Cookie"
+            ],
+            correct: 1,
+            explanation: "CL określa długość w bajtach. TE (chunked) określa koniec za pomocą bloku o rozmiarze 0. Konflikt między nimi to źródło problemu."
+        },
+        {
+            question: "Co oznacza skrót CL.TE?",
+            options: [
+                "Frontend używa Content-Length, Backend używa Transfer-Encoding.",
+                "Frontend używa Transfer-Encoding, Backend używa Content-Length.",
+                "Oba serwery używają Content-Length.",
+                "Clear Text . Text Encoding"
+            ],
+            correct: 0,
+            explanation: "Pierwszy człon (CL) odnosi się do serwera, który pierwszy przetwarza żądanie (Frontend), drugi (TE) do Backendu."
+        },
+        {
+            question: "Jaki znak/wartość oznacza koniec wiadomości w kodowaniu `Transfer-Encoding: chunked`?",
+            options: [
+                "Znak końca pliku (EOF).",
+                "Blok o rozmiarze 0 (zero chunk), zakończony pustą linią.",
+                "Słowo 'END'.",
+                "Zamknięcie połączenia TCP."
+            ],
+            correct: 1,
+            explanation: "Serwer czytający 'chunked' pobiera dane kawałek po kawałku, aż napotka `0\r\n\r\n`."
+        },
+        {
+            type: "scenario",
+            question: "Udało Ci się 'przemycić' żądanie POST, które zapisuje komentarz. Czeka ono w buforze Backendu. Nagle inny użytkownik wchodzi na stronę. Co się stanie?",
+            options: [
+                "Serwer się zawiesi.",
+                "Żądanie użytkownika zostanie 'doklejone' do Twojego przemyconego żądania. Jego sesja i dane mogą wylądować w treści Twojego komentarza.",
+                "Użytkownik dostanie błąd 404.",
+                "Nic, ataki działają tylko na Ciebie."
+            ],
+            correct: 1,
+            explanation: "To najgroźniejszy skutek. Możesz kraść sesje, hasła i dane innych użytkowników, nie mając z nimi żadnego kontaktu (tzw. Request Hijacking)."
+        },
+        {
+            question: "Dlaczego HTTP/2 jest generalnie odporne na Request Smuggling (w swojej czystej postaci)?",
+            options: [
+                "Bo jest szybsze.",
+                "Bo używa mechanizmu ramek binarnych z wbudowaną długością dla każdej ramki, eliminując niejednoznaczność CL vs TE.",
+                "Bo nie używa TCP.",
+                "Bo Google tak powiedział."
+            ],
+            correct: 1,
+            explanation: "W HTTP/2 długość jest jednoznaczna. Ryzyko pojawia się jednak przy tzw. 'HTTP/2 Downgrade', gdy Frontend zamienia H2 na H1.1 dla Backendu."
+        },
+        {
+            question: "Co to jest atak TE.TE?",
+            options: [
+                "Oba serwery używają TE, ale jeden z nich udaje się oszukać poprzez obfuskację nagłówka (np. `Transfer-Encoding: xchunked`), aby przeszedł na CL.",
+                "Atak na telefony.",
+                "Double Transfer Encoding.",
+                "Błąd 500."
+            ],
+            correct: 0,
+            explanation: "Hakerzy próbują zmylić parsery, wysyłając np. dwa nagłówki TE lub zniekształcone nazwy, licząc, że jeden serwer je zignoruje (fallback do CL)."
+        },
+        {
+            type: "scenario",
+            question: "Frontend blokuje dostęp do URL `/admin`. Jak Smuggling może pomóc w obejściu tego zabezpieczenia?",
+            options: [
+                "Nie może.",
+                "Wysyłasz legalne żądanie do `/home` (które Frontend widzi i puszcza), ale w jego ciele przemycasz drugie żądanie do `/admin` (które Backend wykona).",
+                "Zgadując hasło admina.",
+                "Wyłączając Frontend."
+            ],
+            correct: 1,
+            explanation: "Frontend sprawdza tylko 'zewnętrzne' żądanie. Backend wykonuje to, co otrzymał, w tym to 'ukryte' w środku."
+        },
+        {
+            question: "Jakie narzędzie w Burp Suite automatyzuje wykrywanie tego błędu?",
+            options: [
+                "SQLmap.",
+                "HTTP Request Smuggler (rozszerzenie BApp Store).",
+                "Dirbuster.",
+                "Decoder."
+            ],
+            correct: 1,
+            explanation: "Ręczne liczenie bajtów w Smugglingu jest koszmarem. To narzędzie od Jamesa Kettle'a robi to automatycznie i wykrywa desynchronizację."
+        },
+        {
+            question: "Jaka jest najlepsza obrona przed Request Smuggling?",
+            options: [
+                "Używanie tylko jednego serwera (brak podziału Front/Back).",
+                "Wymuszenie HTTP/2 na całej ścieżce (End-to-End) lub ścisła konfiguracja parserów HTTP, by odrzucały niejednoznaczne żądania.",
+                "Blokowanie metody POST.",
+                "Używanie HTTPS."
+            ],
+            correct: 1,
+            explanation: "Jeśli cała komunikacja odbywa się po HTTP/2, problem znika. Alternatywą jest konfiguracja serwerów tak, by błąd parsowania zamykał połączenie."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

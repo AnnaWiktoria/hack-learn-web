@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 19: Micro-Labs - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Blueprint Blue (Architecture / Analysis) */
+        :root {
+            --accent: #2962ff;
+            --accent-glow: rgba(41, 98, 255, 0.3);
+        }
+        
+        /* Style dla Micro-Labów */
+        .lab-container {
+            font-family: 'JetBrains Mono', monospace;
+            background: #050505;
+            border: 1px solid #333;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .lab-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--accent);
+            color: #fff;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            font-weight: bold;
+        }
+
+        .highlight-area {
+            color: #ffd600;
+            border-bottom: 1px dashed #ffd600;
+            cursor: help;
+        }
+        
+        .req-method { color: #00e5ff; }
+        .req-url { color: #fff; }
+        .req-header { color: #aaa; }
+        .req-val { color: #2962ff; font-weight: bold;}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>MICRO-LABS: ANALYSIS</h1>
+        <p>MODUŁ 19: Analiza powierzchni ataku, Identyfikacja parametrów i Trust Boundaries</p>
+    </header>
+
+    <!-- WSTĘP -->
+    <section>
+        <h2>> CEL: MYŚLEĆ ZANIM KLIKNIESZ</h2>
+        <p>Największy błąd początkujących? Uruchamianie skanerów na oślep. W tych laboratoriach ćwiczymy <strong>oko analityka</strong>.</p>
+        <p>Nie szukasz exploita. Szukasz <strong>potencjału</strong>.</p>
+    </section>
+
+    <!-- LAB 1: API REQUEST -->
+    <section>
+        <h2>> LAB 01: API ORDER FLOW</h2>
+        <div class="card">
+            <h3>KONTEKST:</h3>
+            <p>Jesteś zalogowany jako zwykły użytkownik. Chcesz złożyć zamówienie. Przechwytujesz taki request:</p>
+            
+            <div class="lab-container">
+                <span class="lab-badge">HTTP REQUEST</span>
+                <span class="req-method">POST</span> <span class="req-url">/api/v1/orders/create</span> HTTP/1.1<br>
+                <span class="req-header">Host:</span> shop.example.com<br>
+                <span class="req-header">Authorization:</span> Bearer eyJhbGci...<br>
+                <span class="req-header">Content-Type:</span> application/json<br>
+                <br>
+                {<br>
+                &nbsp;&nbsp;"user_id": <span class="req-val">1055</span>,<br>
+                &nbsp;&nbsp;"cart_id": "c_998877",<br>
+                &nbsp;&nbsp;"items": [<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;{ "id": 55, "price": <span class="req-val">100.00</span>, "qty": 1 }<br>
+                &nbsp;&nbsp;],<br>
+                &nbsp;&nbsp;"promo_code": <span class="req-val">null</span>,<br>
+                &nbsp;&nbsp;"status": <span class="req-val">"PENDING"</span><br>
+                }
+            </div>
+
+            <h3>ZADANIE ANALITYCZNE:</h3>
+            <p>Patrząc na powyższy kod, które parametry są najbardziej podejrzane (High Priority) do testów ręcznych?</p>
+            <ul>
+                <li><strong>user_id:</strong> Dlaczego klient wysyła ID? Czy mogę złożyć zamówienie dla ID 1056? (IDOR / Masquerading)</li>
+                <li><strong>price:</strong> Czy backend przelicza cenę, czy ufa temu co wysłałem? (Business Logic - Price Manipulation)</li>
+                <li><strong>status:</strong> A co jeśli wyślę od razu "PAID"? (Mass Assignment / Logic Flaw)</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- LAB 2: PROFILE UPDATE -->
+    <section>
+        <h2>> LAB 02: PROFILE PICTURE</h2>
+        <div class="card">
+            <h3>KONTEKST:</h3>
+            <p>Funkcja zmiany awatara. Użytkownik podaje URL do obrazka.</p>
+            
+            <div class="lab-container">
+                <span class="lab-badge">PHP CODE SNIPPET</span>
+                $url = $_POST['avatar_url'];<br>
+                <br>
+                <span class="comment">// Pobieranie pliku</span><br>
+                $image = <span class="highlight">file_get_contents($url)</span>;<br>
+                <br>
+                <span class="comment">// Zapisywanie na dysku</span><br>
+                file_put_contents("uploads/" . $user_id . ".jpg", $image);
+            </div>
+
+            <h3>ANALIZA RYZYKA:</h3>
+            <p>Widzisz funkcję <code>file_get_contents($url)</code>. Co Ci przychodzi do głowy?</p>
+            <ol>
+                <li><strong>SSRF:</strong> Co jeśli w <code>$url</code> podam <code>http://localhost:80</code> albo <code>http://169.254.169.254</code>? Serwer to pobierze.</li>
+                <li><strong>LFI/File Read:</strong> Co jeśli podam <code>file:///etc/passwd</code>? Funkcja to odczyta i zapisze jako `.jpg`. Jeśli otworzę ten obrazek w notatniku - zobaczę plik systemowy.</li>
+                <li><strong>DoS:</strong> Co jeśli podam link do pliku 10GB?</li>
+            </ol>
+        </div>
+    </section>
+
+    <!-- CHECKLIST -->
+    <section>
+        <h2>AUDIT NOTEBOOK 📓</h2>
+        <div class="card checklist-card">
+            <div class="checklist-item">
+                <span class="check-icon">📝</span>
+                <div><strong>Zasada #1:</strong> Jeśli dane przychodzą w Request (JSON/Body) -> sprawdź Mass Assignment i Logic Flaws.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">📝</span>
+                <div><strong>Zasada #2:</strong> Jeśli dane przychodzą w URL (ID) -> sprawdź IDOR (AuthZ).</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">📝</span>
+                <div><strong>Zasada #3:</strong> Jeśli dane to URL/Ścieżka -> sprawdź SSRF i LFI.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>🎓 AUDYT: PODEJMIJ DECYZJĘ</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | Moduł 19</p>
+    </footer>
+</div>
+
+<!-- DANE DO QUIZU -->
+<script>
+    const quizData = [
+        {
+            type: "scenario",
+            question: "Analizujesz request: `POST /api/reset-password { 'email': 'admin@corp.com' }`. Odpowiedź serwera: `200 OK { 'status': 'sent', 'reset_token': '123456' }`. Gdzie leży krytyczny błąd?",
+            options: [
+                "Brak szyfrowania SSL.",
+                "Information Disclosure / Logic Flaw. Serwer zwraca token resetujący w odpowiedzi do klienta (czyli do Ciebie), zamiast wysłać go tylko na maila. To pozwala przejąć każde konto.",
+                "Brak parametru CSRF.",
+                "Email jest widoczny."
+            ],
+            correct: 1,
+            explanation: "To błąd typu 'Response Disclosure'. Jeśli API zwraca token w odpowiedzi HTTP, nie musisz mieć dostępu do skrzynki ofiary, żeby zresetować jej hasło."
+        },
+        {
+            type: "scenario",
+            question: "Widzisz endpoint `GET /download?filename=report.pdf`. Jakie 3 wektory ataku sprawdzasz w pierwszej kolejności (wg priorytetu)?",
+            options: [
+                "1. XSS, 2. CSRF, 3. Clickjacking",
+                "1. Path Traversal (LFI), 2. XSS (w nazwie pliku), 3. SQLi (jeśli nazwa idzie do bazy)",
+                "1. Brute Force, 2. DDoS, 3. Phishing",
+                "1. SSRF, 2. XXE, 3. RCE"
+            ],
+            correct: 1,
+            explanation: "Parametr `filename` to klasyczny cel dla Path Traversal (`../../etc/passwd`). XSS jest możliwy (Reflected), jeśli nazwa wraca w nagłówku Content-Disposition."
+        },
+        {
+            type: "scenario",
+            question: "Masz funkcję 'Zaproś znajomego'. Wpisujesz email, a serwer wysyła wiadomość. Jak sprawdzisz, czy funkcja jest podatna na 'Email Injection' lub spamowanie?",
+            options: [
+                "Wpiszę `admin`.",
+                "Spróbuję wpisać 1000 adresów email oddzielonych przecinkami lub użyć Burp Intruder do wysłania 1000 żądań do tej samej osoby (Email Bombing).",
+                "Spróbuję wgrać plik .exe.",
+                "Wpiszę SQL Injection."
+            ],
+            correct: 1,
+            explanation: "Funkcje wysyłające maile to idealny wektor do DoS lub nękania użytkowników. Audytor musi sprawdzić Rate Limiting."
+        },
+        {
+            type: "scenario",
+            question: "API: `PUT /users/100` z body `{'role': 'user', 'banned': false}`. Backend ufa tym danym. Jaką kategorię błędu wpiszesz do raportu?",
+            options: [
+                "Injection",
+                "Mass Assignment (lub Broken Function Level Authorization, jeśli zmienisz rolę na admina).",
+                "Security Misconfiguration",
+                "Logging Failures"
+            ],
+            correct: 1,
+            explanation: "Jeśli możesz zmienić pole 'banned' na false lub 'role' na admina, bo backend przyjmuje cały obiekt JSON - to podręcznikowy Mass Assignment."
+        },
+        {
+            type: "scenario",
+            question: "Aplikacja w React przechowuje stan `isAdmin: true` w `localStorage`. Jak ocenisz to w raporcie?",
+            options: [
+                "Critical - Natychmiastowe przejęcie serwera.",
+                "High/Medium - Client-Side Authorization Flaw. Jeśli API nie weryfikuje roli po stronie serwera, jest to Critical. Jeśli weryfikuje - to 'tylko' bad practice (Information Disclosure/UX flaw).",
+                "Info - To standardowa praktyka.",
+                "Low - Tylko wizualny błąd."
+            ],
+            correct: 1,
+            explanation: "Ważne rozróżnienie: Czy zmiana w localStorage daje faktyczny dostęp do danych (Critical), czy tylko pokazuje puste menu (Low/Medium)? Audytor musi to zweryfikować."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

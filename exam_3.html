@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Egzamin: Moduł 3 - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: CYBER GLITCH (Cyan & Purple) */
+        :root {
+            --accent: #00e5ff; /* Cyan */
+            --accent-glow: rgba(0, 229, 255, 0.4);
+            --success: #d500f9; /* Purple */
+            --danger: #ff1744;
+        }
+        
+        body {
+            /* Tło "Digital Grid" */
+            background-image: 
+                linear-gradient(rgba(0, 10, 20, 0.9), rgba(0, 10, 20, 0.9)),
+                linear-gradient(90deg, #112 1px, transparent 1px),
+                linear-gradient(#112 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .boss-header {
+            border: 2px solid var(--accent);
+            padding: 20px;
+            text-align: center;
+            background: rgba(0, 229, 255, 0.05);
+            margin-bottom: 40px;
+            box-shadow: 0 0 30px var(--accent-glow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .boss-title {
+            font-size: 3rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 5px;
+            margin: 0;
+            text-shadow: 2px 2px 0px var(--success);
+        }
+
+        /* Ozdobny pasek "Loading" */
+        .loading-bar {
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            width: 100%;
+            margin-top: 15px;
+            box-shadow: 0 0 10px var(--accent);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div class="boss-header">
+        <h1 class="boss-title">EGZAMIN KOŃCOWY</h1>
+        <div class="loading-bar"></div>
+        <p style="color: #fff; margin-top: 15px; font-family: var(--font-mono);">
+            /// POZIOM 3: MODERN WEB (API / SPA / XXE) ///
+        </p>
+    </div>
+
+    <section>
+        <h2>> STATUS MISJI</h2>
+        <p>Test wiedzy z lekcji 14-16. Tematyka: Bezpieczeństwo REST API, pułapki JavaScript (React/Vue) oraz ataki na parsery XML.</p>
+        <div class="card" style="border-color: var(--accent);">
+            <h3>ZASADY GRY</h3>
+            <ul>
+                <li><strong>Liczba pytań:</strong> 15</li>
+                <li><strong>Wymagany wynik:</strong> 80% (12/15)</li>
+                <li><strong>Zakres:</strong> IDOR/BOLA, Mass Assignment, XSS w SPA, JWT Storage, XXE Injection.</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>⚔️ ROZPOCZNIJ WALKĘ</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | EXAM 03</p>
+    </footer>
+</div>
+
+<!-- DANE DO EGZAMINU -->
+<script>
+    const quizData = [
+        // --- API SECURITY (L14) ---
+        {
+            type: "scenario",
+            question: "Jesteś zalogowany jako User A. API pozwala Ci pobrać fakturę GET /invoices/100. Zmieniasz ID na 101 i pobierasz fakturę Usera B. Jak nazywa się ta podatność wg OWASP API Top 10?",
+            options: [
+                "Mass Assignment.",
+                "BOLA (Broken Object Level Authorization) / IDOR.",
+                "SSRF.",
+                "Injection."
+            ],
+            correct: 1,
+            explanation: "To najczęstszy błąd w API. Backend ufa, że skoro znasz ID zasobu, to masz do niego prawo. Należy zawsze weryfikować własność obiektu."
+        },
+        {
+            question: "Co to jest 'Mass Assignment' (lub Auto-Binding)?",
+            options: [
+                "Atak DDoS na API.",
+                "Sytuacja, gdy framework automatycznie przepisuje dane z JSON-a wejściowego do bazy danych, pozwalając napastnikowi nadpisać pola chronione (np. 'role': 'admin', 'balance': 99999).",
+                "Wysyłanie zbyt wielu maili.",
+                "Błąd w logowaniu."
+            ],
+            correct: 1,
+            explanation: "Nowoczesne frameworki ułatwiają życie, mapując JSON wprost na obiekty. Jeśli deweloper nie zablokuje wrażliwych pól (DTO/Allowlist), haker może je zmienić."
+        },
+        {
+            question: "Dlaczego zwracanie pełnego obiektu użytkownika w JSON (np. łącznie z hashem hasła i adresem), licząc na to, że frontend tego nie wyświetli, jest błędem?",
+            options: [
+                "Bo zużywa transfer.",
+                "To 'Excessive Data Exposure'. Atakujący może przechwycić odpowiedź w proxy (Burp Suite) i odczytać dane, których nie widać na ekranie.",
+                "Bo JSON staje się nieczytelny.",
+                "To nie jest błąd, to feature."
+            ],
+            correct: 1,
+            explanation: "Frontend służy do prezentacji, nie do bezpieczeństwa. Wszystkie dane wysłane do przeglądarki są już skompromitowane (widoczne dla użytkownika)."
+        },
+        {
+            question: "Jaki kod HTTP powinien zwrócić serwer API, gdy wykryje zbyt dużą liczbę zapytań w krótkim czasie (Rate Limiting)?",
+            options: [
+                "503 Service Unavailable",
+                "429 Too Many Requests",
+                "400 Bad Request",
+                "200 OK"
+            ],
+            correct: 1,
+            explanation: "Status 429 informuje klienta o nałożeniu blokady czasowej. Jest kluczowy w obronie przed Brute-Force i DDoS."
+        },
+        
+        // --- SPA & CLIENT-SIDE (L15) ---
+        {
+            question: "Gdzie jest najbezpieczniejsze miejsce na przechowywanie tokena JWT w aplikacji SPA (przeglądarkowej)?",
+            options: [
+                "localStorage",
+                "sessionStorage",
+                "Ciasteczko z flagami HttpOnly i Secure",
+                "Zmienna globalna window.token"
+            ],
+            correct: 2,
+            explanation: "Tylko ciasteczko HttpOnly jest niewidoczne dla JavaScriptu. Jeśli przechowujesz token w localStorage, każda podatność XSS (nawet mała) prowadzi do kradzieży konta."
+        },
+        {
+            type: "scenario",
+            question: "Programista React ukrył przycisk 'Panel Admina' używając warunku: `{ user.isAdmin && <AdminButton /> }`. Czy to zabezpiecza panel?",
+            options: [
+                "Tak, haker nie może kliknąć czegoś, czego nie ma.",
+                "Nie. To tylko kosmetyka (Security by Obscurity). Haker może wysłać żądanie bezpośrednio do API lub zmienić zmienną `isAdmin` w konsoli przeglądarki.",
+                "Tak, React szyfruje kod.",
+                "Zależy od wersji Reacta."
+            ],
+            correct: 1,
+            explanation: "Frontend jest niezaufany. Routing i widoczność elementów w SPA to tylko UX. Prawdziwa autoryzacja musi odbywać się na każdym endpoincie API."
+        },
+        {
+            question: "Jakie zagrożenie niosą ze sobą pliki Source Maps (.js.map) na produkcji?",
+            options: [
+                "Zajmują dużo miejsca na dysku.",
+                "Pozwalają odtworzyć oryginalny, czytelny kod źródłowy aplikacji z kodu zminifikowanego. Ułatwia to pentesterom analizę logiki i szukanie ukrytych funkcji.",
+                "Mogą zawierać wirusy.",
+                "Spowalniają działanie strony."
+            ],
+            correct: 1,
+            explanation: "Source Maps są dla deweloperów do debugowania. Na produkcji powinny być wyłączone, bo dają atakującemu 'mapę' całej aplikacji."
+        },
+        {
+            question: "Co robi funkcja `dangerouslySetInnerHTML` w React (lub `v-html` w Vue)?",
+            options: [
+                "Służy do bezpiecznego renderowania tekstu.",
+                "Wyłącza sanityzację i pozwala wstrzyknąć surowy kod HTML do strony. Jeśli dane pochodzą od użytkownika, jest to prosty wektor ataku XSS.",
+                "Służy do komunikacji z bazą danych.",
+                "Generuje błędy."
+            ],
+            correct: 1,
+            explanation: "Frameworki JS domyślnie chronią przed XSS. Użycie tej funkcji celowo wyłącza te zabezpieczenia. Powinna być używana tylko z zaufanymi danymi."
+        },
+
+        // --- XML & XXE (L16) ---
+        {
+            question: "Co oznacza skrót XXE?",
+            options: [
+                "XML External Entity",
+                "XSS XML Encoder",
+                "Extensible X-Ray Engine",
+                "XML Encryption"
+            ],
+            correct: 0,
+            explanation: "XXE to atak na parser XML, który pozwala zdefiniować encję (zmienną) odwołującą się do zewnętrznego zasobu (pliku lub URL)."
+        },
+        {
+            question: "W jakim elemencie pliku XML definiuje się encje podatne na atak XXE?",
+            options: [
+                "W sekcji <body>",
+                "W definicji DTD (Document Type Definition), wewnątrz tagu <!DOCTYPE>",
+                "W nagłówku HTTP.",
+                "W komentarzach."
+            ],
+            correct: 1,
+            explanation: "Atak XXE wymaga, aby parser XML przetwarzał DTD (Document Type Definition). To tam używa się słowa kluczowego SYSTEM."
+        },
+        {
+            type: "scenario",
+            question: "Wysyłasz payload: `<!ENTITY xxe SYSTEM 'file:///etc/passwd'>`. Co próbujesz osiągnąć?",
+            options: [
+                "Próbuję nadpisać plik passwd.",
+                "Próbuję odczytać zawartość lokalnego pliku systemowego (LFI via XXE).",
+                "Próbuję usunąć użytkownika.",
+                "Próbuję wgrać wirusa."
+            ],
+            correct: 1,
+            explanation: "Słowo kluczowe SYSTEM w DTD każe parserowi pobrać zawartość wskazanego pliku i wstawić ją do dokumentu XML."
+        },
+        {
+            question: "Który popularny format plików graficznych jest tak naprawdę XML-em i może być wektorem ataku XXE?",
+            options: [
+                "JPEG",
+                "PNG",
+                "SVG (Scalable Vector Graphics)",
+                "GIF"
+            ],
+            correct: 2,
+            explanation: "SVG to wektorowy format tekstowy oparty na XML. Przeglądarki i serwery parsują go jak każdy inny XML, co otwiera drogę do XSS i XXE."
+        },
+        {
+            question: "Co to jest 'Billion Laughs Attack'?",
+            options: [
+                "Atak socjotechniczny.",
+                "Atak DoS (Denial of Service) wykorzystujący zagnieżdżone encje XML, które po rozwinięciu zajmują gigabajty pamięci RAM.",
+                "Atak na pliki audio.",
+                "Rodzaj ransomware."
+            ],
+            correct: 1,
+            explanation: "To klasyczna 'bomba XML'. Mały plik (kilka KB) definiuje encje, które odwołują się do siebie nawzajem, tworząc wykładniczy wzrost danych w pamięci."
+        },
+        {
+            type: "scenario",
+            question: "API przyjmuje tylko format JSON. Czy jest sens testować XXE?",
+            options: [
+                "Nie, JSON jest odporny na XXE.",
+                "Tak. Warto spróbować zmienić nagłówek `Content-Type` na `application/xml` i wysłać body jako XML. Czasami serwery wspierają oba formaty, co pozwala na atak.",
+                "Tak, JSON to to samo co XML.",
+                "Nie, szkoda czasu."
+            ],
+            correct: 1,
+            explanation: "To technika zwana 'Content-Type Spoofing' lub downgrade attack. Frameworki backendowe (np. Java Spring) często domyślnie obsługują XML, nawet jeśli dokumentacja o tym nie mówi."
+        },
+        {
+            question: "Jaki jest najskuteczniejszy sposób obrony przed XXE?",
+            options: [
+                "Używanie WAF.",
+                "Całkowite wyłączenie przetwarzania DTD i External Entities w konfiguracji parsera XML (np. `disallow-doctype-decl`).",
+                "Sprawdzanie rozszerzenia pliku.",
+                "Używanie tylko plików PDF."
+            ],
+            correct: 1,
+            explanation: "Jeśli parser ma wyłączoną obsługę DTD, atak XXE jest technicznie niemożliwy, niezależnie od tego, co wyśle haker."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

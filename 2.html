@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 02: Statusy HTTP - Kurs Pentestera</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent dla tej lekcji: Neon Purple */
+        :root {
+            --accent: #d500f9;
+            --accent-glow: rgba(213, 0, 249, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>STATUSY HTTP</h1>
+            <p>MODUŁ 02: Kody odpowiedzi, Rekonesans i Błędy Serwera</p>
+        </header>
+
+        <!-- 1. KLASYFIKACJA -->
+        <section>
+            <h2>> KOD ODPOWIEDZI (RESPONSE CODE)</h2>
+            <p>Każda odpowiedź serwera zaczyna się od 3-cyfrowego kodu. Dla pentestera jest to pierwsza informacja o
+                tym, jak serwer zareagował na nasz payload.</p>
+
+            <div class="card">
+                <h3>KLASYFIKACJA STATUSÓW</h3>
+                <div style="display: grid; gap: 10px;">
+                    <div><span class="status-badge" style="background: #555;">1xx</span> <strong>Informacyjne</strong> –
+                        "Czekaj, przetwarzam..." (rzadko istotne w pentestach).</div>
+                    <div><span class="status-badge s-2xx">2xx</span> <strong>Sukces</strong> – Żądanie przyjęte i
+                        przetworzone.</div>
+                    <div><span class="status-badge s-3xx">3xx</span> <strong>Przekierowanie</strong> – "Zasób jest gdzie
+                        indziej".</div>
+                    <div><span class="status-badge s-4xx">4xx</span> <strong>Błąd Klienta</strong> – Twoja wina (złe
+                        dane, brak dostępu).</div>
+                    <div><span class="status-badge s-5xx">5xx</span> <strong>Błąd Serwera</strong> – Wina serwera
+                        (awaria, błąd w kodzie).</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. STATUSY W PENTESTINGU -->
+        <section>
+            <h2>> INTERPRETACJA HAKERA</h2>
+            <p>Narzędzia takie jak <strong>Feroxbuster</strong> czy <strong>Burp Suite</strong> zalewają nas statusami.
+                Musisz wiedzieć, które są ciekawe.</p>
+
+            <div class="card">
+                <h3>SUKCES (2xx) i PRZEKIEROWANIA (3xx)</h3>
+                <ul>
+                    <li><span class="status-badge s-2xx">200 OK</span> Standardowa odpowiedź.
+                        <br><span class="highlight">Ryzyko:</span> Jeśli znajdziesz <code>200</code> na endpointcie
+                        <code>/backup.sql</code> lub <code>/admin</code> (bez logowania) → Krytyczny wyciek danych.
+                    </li>
+                    <li><span class="status-badge s-2xx">204 No Content</span> Sukces, ale brak treści.
+                        <br><span class="comment">// Częste w API. Warto sprawdzić, czy akcja (np. DELETE) faktycznie
+                            zadziałała.</span>
+                    </li>
+                    <li><span class="status-badge s-3xx">301/302 Redirect</span> Przekierowanie.
+                        <br><span class="comment">// Pentest: Częste przy panelach admina (`/admin` → 302 → `/login`).
+                            Sprawdź nagłówek `Location`.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>BŁĘDY KLIENTA (4xx) - CZYLI "ODBIJASZ SIĘ"</h3>
+                <table>
+                    <tr>
+                        <th>Status</th>
+                        <th>Znaczenie Pentestowe</th>
+                    </tr>
+                    <tr>
+                        <td><span class="status-badge s-4xx">401</span> Unauthorized</td>
+                        <td>Brak tokena/sesji. "Zaloguj się". Testuj brute-force lub domyślne hasła.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="status-badge s-4xx">403</span> Forbidden</td>
+                        <td><strong>Kluczowe dla IDOR.</strong> "Wiem kim jesteś, ale nie wejdziesz". Często da się
+                            ominąć (Bypass 403) zmianą nagłówków.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="status-badge s-4xx">405</span> Method Not Allowed</td>
+                        <td>"Zła metoda". <strong>Potwierdza istnienie pliku!</strong> Spróbuj zmienić GET na POST lub
+                            DELETE.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="status-badge s-4xx">429</span> Too Many Requests</td>
+                        <td>Rate Limiting. Zwolnij skanowanie, bo dostaniesz bana na IP.</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="card" style="border-left-color: var(--danger);">
+                <h3>BŁĘDY SERWERA (5xx) - HOLY GRAIL?</h3>
+                <p><span class="status-badge s-5xx">500 Internal Server Error</span> to ulubiony status pentestera.</p>
+                <ul>
+                    <li>Oznacza, że aplikacja się "wywaliła" przez Twoje dane.</li>
+                    <li><strong>Dlaczego to ważne?</strong> Często oznacza nieobsłużony wyjątek wywołany np. znakiem
+                        <code>'</code> w SQL Injection.</li>
+                    <li>Może ujawnić <strong>Stack Trace</strong> (ścieżki plików, wersje bibliotek, fragmenty kodu).
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 3. HTTPS -->
+        <section>
+            <h2>> HTTPS I CERTYFIKATY</h2>
+            <p>HTTPS to HTTP w tunelu TLS. Zapewnia poufność, ale nie oznacza, że aplikacja jest bezpieczna.</p>
+            <div class="card">
+                <p><strong>Czerwone flagi przy HTTPS:</strong></p>
+                <ul>
+                    <li>❌ <strong>Wygasły certyfikat:</strong> Może sugerować porzucony, stary serwer (zapomniany
+                        dev/test environment).</li>
+                    <li>❌ <strong>Self-signed certificate:</strong> Częste na środowiskach deweloperskich. Ułatwia ataki
+                        Man-in-the-Middle.</li>
+                    <li>❌ <strong>Mieszana zawartość (Mixed Content):</strong> Strona HTTPS ładuje skrypty po HTTP
+                        (podatne na wstrzyknięcie kodu).</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- CHECKLIST -->
+        <section>
+            <h2>CHECKLISTA / RED FLAGS</h2>
+            <div class="card checklist-card">
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>500 Error po wpisaniu ':</strong> Wpisujesz apostrof w formularzu, dostajesz 500?
+                        Potencjalne SQL Injection.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Różnica między 403 a 404:</strong> Jeśli <code>/admin</code> zwraca 403, a
+                        <code>/asdfgh</code> zwraca 404 -> Panel admina istnieje.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>200 OK na plikach .git:</strong> Dostęp do katalogu <code>/.git/</code> oznacza
+                        pobranie całego kodu źródłowego strony.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QUIZ -->
+        <section id="quiz-section">
+            <h2>🎓 WERYFIKACJA WIEDZY</h2>
+            <div id="quiz-container"></div>
+        </section>
+
+        <footer>
+            <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Kurs Pentestera | Moduł 02</p>
+        </footer>
+    </div>
+
+    <!-- DANE DO QUIZU -->
+    <script>
+        const quizData = [
+            {
+                question: "Co oznacza status HTTP 204 No Content?",
+                options: [
+                    "Błąd serwera – brak bazy danych.",
+                    "Zasób nie został znaleziony (odpowiednik 404).",
+                    "Żądanie zakończone sukcesem (2xx), ale serwer nie zwraca treści w body (częste w API).",
+                    "Wymagane jest uwierzytelnienie."
+                ],
+                correct: 2,
+                explanation: "204 to sukces. Oznacza, że operacja (np. wysyłka danych) się udała, serwer ją przyjął, ale nie ma potrzeby odsyłania żadnego HTML/JSON."
+            },
+            {
+                type: "scenario",
+                question: "Wysyłasz payload testowy (np. znak apostrofu) i otrzymujesz status '500 Internal Server Error'. Co to sugeruje pentesterowi?",
+                options: [
+                    "Serwer jest bezpieczny i zablokował atak.",
+                    "Aplikacja napotkała nieobsłużony błąd. Może to wskazywać na podatność SQL Injection lub błąd logiki.",
+                    "Strona nie istnieje.",
+                    "Musisz odświeżyć stronę."
+                ],
+                correct: 1,
+                explanation: "Status 500 oznacza, że Twój input spowodował awarię backendu. To 'zapach' podatności, często iniekcji (SQLi, Code Injection)."
+            },
+            {
+                question: "Jaka jest główna różnica między statusem 401 a 403?",
+                options: [
+                    "401 to błąd serwera, 403 to błąd klienta.",
+                    "401 oznacza 'Nie wiem kim jesteś' (zaloguj się), 403 oznacza 'Wiem kim jesteś, ale nie masz tu wstępu' (brak uprawnień).",
+                    "Nie ma różnicy, są używane zamiennie.",
+                    "403 dotyczy tylko plików graficznych."
+                ],
+                correct: 1,
+                explanation: "401 = Uwierzytelnienie (Authentication). 403 = Autoryzacja (Authorization)."
+            },
+            {
+                type: "scenario",
+                question: "Skanujesz katalogi (Dirb/Feroxbuster). Otrzymujesz status '405 Method Not Allowed' na endpointcie '/api/delete_user'. Jaki jest wniosek?",
+                options: [
+                    "Zasób nie istnieje, należy go zignorować.",
+                    "Zasób ISTNIEJE, ale użyłeś złej metody (np. GET zamiast POST). Warto spróbować innej metody.",
+                    "Serwer jest wyłączony.",
+                    "To błąd certyfikatu SSL."
+                ],
+                correct: 1,
+                explanation: "405 to potwierdzenie istnienia zasobu. Serwer mówi: 'Widzę ten plik, ale nie pozwolę Ci go pobrać tą metodą'. Należy sprawdzić metody POST, DELETE, PUT."
+            },
+            {
+                question: "Co oznacza status 301 Moved Permanently?",
+                options: [
+                    "Serwer jest przeciążony.",
+                    "Zasób został trwale przeniesiony na nowy adres URL (wskazany w nagłówku Location).",
+                    "Tymczasowe przekierowanie po zalogowaniu.",
+                    "Zasób został usunięty bezpowrotnie."
+                ],
+                correct: 1,
+                explanation: "301 to trwałe przekierowanie. Przeglądarka zapamięta (cache), że stary adres = nowy adres."
+            },
+            {
+                question: "Status 429 Too Many Requests sugeruje, że:",
+                options: [
+                    "Payload jest za duży.",
+                    "Włączył się mechanizm Rate Limiting (ograniczenie liczby zapytań na sekundę/minutę).",
+                    "Serwer nie obsługuje mediów tego typu.",
+                    "Baza danych jest pełna."
+                ],
+                correct: 1,
+                explanation: "429 to sygnał 'Zwolnij!'. Dla pentestera oznacza to utrudnienie w brute-force lub skanowaniu."
+            },
+            {
+                question: "Czego NIE sprawdza przeglądarka przy weryfikacji certyfikatu SSL?",
+                options: [
+                    "Czy certyfikat został wydany dla odwiedzanej domeny.",
+                    "Czy data ważności certyfikatu nie upłynęła.",
+                    "Czy kod źródłowy strony jest bezpieczny (wolny od wirusów/XSS).",
+                    "Czy certyfikat jest podpisany przez zaufany urząd (CA)."
+                ],
+                correct: 2,
+                explanation: "SSL/TLS (zielona kłódka) gwarantuje szyfrowanie i tożsamość serwera, ale NIE gwarantuje, że strona jest bezpieczna. Strona phishingowa też może mieć HTTPS."
+            },
+            {
+                type: "scenario",
+                question: "Sprawdzasz dostęp do '/admin'. Otrzymujesz status 200 OK. Co to oznacza?",
+                options: [
+                    "Strona nie działa.",
+                    "Dostęp zablokowany.",
+                    "Zasób jest dostępny i załadował się poprawnie. Jeśli nie podałeś hasła - znalazłeś poważny błąd (Broken Access Control).",
+                    "To przekierowanie."
+                ],
+                correct: 2,
+                explanation: "200 OK na wrażliwym zasobie bez wcześniejszego logowania to 'Jackpot' dla pentestera (o ile to nie jest strona z napisem 'Access Denied' ale ze statusem 200 - tzw. Soft 404)."
+            },
+            {
+                question: "Status 413 Payload Too Large może być istotny przy testowaniu:",
+                options: [
+                    "Ataków DoS (Denial of Service) lub omijania WAF.",
+                    "Kradzieży ciasteczek.",
+                    "Przekierowań URL.",
+                    "Wersji protokołu HTTP."
+                ],
+                correct: 0,
+                explanation: "Serwer odrzuca zbyt duże żądanie. Można badać granice tego limitu, aby wywołać błąd lub próbować 'przemycić' dane w kawałkach."
+            },
+            {
+                type: "scenario",
+                question: "Widzisz, że '/login' przekierowuje (302) do '/dashboard' po podaniu hasła. Gdzie szukać tokena sesji?",
+                options: [
+                    "W kodzie HTML strony logowania.",
+                    "W nagłówku 'Set-Cookie' odpowiedzi 302.",
+                    "W pliku robots.txt.",
+                    "W statusie 404."
+                ],
+                correct: 1,
+                explanation: "Podczas przekierowania po udanym logowaniu serwer zazwyczaj ustawia ciasteczko sesyjne w nagłówku Set-Cookie w tej samej odpowiedzi, która ma status 302."
+            }
+        ];
+    </script>
+
+    <script src="quiz.js"></script>
+
+</body>
+
+</html>

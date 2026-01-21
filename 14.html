@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 14: API Security - Kurs Pentestera</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Electric API Blue (Connectivity / JSON) */
+        :root {
+            --accent: #00b0ff;
+            --accent-glow: rgba(0, 176, 255, 0.3);
+        }
+
+        .json-key {
+            color: #00e5ff;
+        }
+
+        .json-val {
+            color: #ffd600;
+        }
+
+        .json-bool {
+            color: #ff0055;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>API SECURITY</h1>
+            <p>MODUŁ 14: REST, IDOR (BOLA), Mass Assignment i Rate Limiting</p>
+        </header>
+
+        <!-- 1. WSTĘP -->
+        <section>
+            <h2>> NOWY ŚWIAT: JSON I REST</h2>
+            <p>Tradycyjne aplikacje zwracały HTML. Nowoczesne (React, Vue, Mobile Apps) rozmawiają z serwerem tylko
+                przez <strong>API</strong>, wymieniając dane w formacie <strong>JSON</strong>.</p>
+
+            <div class="card">
+                <h3>DLACZEGO API TO INNY ŚWIAT?</h3>
+                <ul>
+                    <li><strong>Klient jest "gruby":</strong> Logika często przeniesiona jest do przeglądarki (JS), a
+                        API to tylko "baza danych na sterydach".</li>
+                    <li><strong>Więcej danych:</strong> API często zwraca <em>za dużo</em> danych (np. pełny obiekt
+                        użytkownika z hasłem), licząc, że frontend ich po prostu nie wyświetli.</li>
+                    <li><strong>Brak stanu:</strong> Każde zapytanie musi mieć token (zazwyczaj JWT).</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 2. IDOR / BOLA -->
+        <section>
+            <h2>> KRÓL PODATNOŚCI: IDOR (BOLA)</h2>
+            <p>W świecie OWASP API Top 10, IDOR nazywa się teraz <strong>BOLA (Broken Object Level
+                    Authorization)</strong>. To najczęstszy i najbardziej krytyczny błąd w API.</p>
+
+            <div class="card">
+                <h3>SCENARIUSZ ATAKU</h3>
+                <p>Jesteś zalogowany jako User A (ID: 100). Chcesz zobaczyć swoje zamówienie.</p>
+                <pre><code>GET /api/v1/orders/100
+Authorization: Bearer eyJhbGci...</code></pre>
+
+                <p><strong>Atak:</strong> Zmieniasz ID na <code>101</code> (zamówienie innej osoby).</p>
+                <pre><code>GET /api/v1/orders/<span class="highlight">101</span></code></pre>
+
+                <p><strong>Błąd:</strong> Serwer sprawdza "Czy token jest ważny?", ale zapomina sprawdzić "Czy ten token
+                    należy do właściciela zamówienia 101?". Dostajesz cudze dane.</p>
+            </div>
+        </section>
+
+        <!-- 3. MASS ASSIGNMENT -->
+        <section>
+            <h2>> MASS ASSIGNMENT</h2>
+            <p>Frameworki (Node.js, Ruby on Rails, Spring) często mają funkcję "automatycznego bindowania". Biorą JSON
+                od klienta i wrzucają go prosto do bazy danych.</p>
+
+            <div class="card">
+                <h3>SCENARIUSZ: NADPISANIE ROLI</h3>
+                <p>Frontend wysyła żądanie aktualizacji profilu:</p>
+                <pre><code>PUT /api/users/me
+{
+  "<span class="json-key">username</span>": "<span class="json-val">jan_kowalski</span>",
+  "<span class="json-key">email</span>": "<span class="json-val">jan@firma.pl</span>"
+}</code></pre>
+
+                <p><strong>Atak:</strong> Haker zgaduje nazwę kolumny w bazie (np. <code>is_admin</code> lub
+                    <code>role</code>) i dokleja ją do JSON-a:</p>
+                <pre><code>{
+  "<span class="json-key">username</span>": "<span class="json-val">jan_kowalski</span>",
+  "<span class="json-key">email</span>": "<span class="json-val">jan@firma.pl</span>",
+  "<span class="json-key">is_admin</span>": <span class="json-bool">true</span>
+}</code></pre>
+
+                <p><strong>Skutek:</strong> Jeśli backend bezmyślnie zapisuje cały obiekt -> zostajesz administratorem.
+                </p>
+            </div>
+        </section>
+
+        <!-- 4. RATE LIMITING -->
+        <section>
+            <h2>> BRAK HAMULCÓW (RATE LIMITING)</h2>
+            <p>API są stworzone do szybkiej komunikacji. To idealne środowisko do ataków siłowych (Brute Force).</p>
+
+            <div class="card">
+                <h3>CO TESTUJEMY?</h3>
+                <ul>
+                    <li><strong>Logowanie:</strong> Czy po 5 próbach dostanę blokadę?</li>
+                    <li><strong>Reset hasła:</strong> Czy mogę wysłać 1000 emaili na sekundę (Email Bombing)?</li>
+                    <li><strong>Kody SMS (2FA):</strong> Czy mogę sprawdzić wszystkie 9999 kodów w minutę?</li>
+                </ul>
+                <p>Jeśli serwer nie zwraca statusu <span class="status-badge s-4xx">429 Too Many Requests</span>, to
+                    znaczy, że jest podatny.</p>
+            </div>
+        </section>
+
+        <!-- CHECKLIST -->
+        <section>
+            <h2>CHECKLISTA / RED FLAGS</h2>
+            <div class="card checklist-card">
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Sekwencyjne ID (1, 2, 3...):</strong> Zaproszenie do wycieku danych (Enumeracja). API
+                        powinno używać UUID.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Nadmiarowe dane (Excessive Data Exposure):</strong> API zwraca cały obiekt (hasło,
+                        PESEL), a frontend filtruje tylko to, co pokazać. Haker widzi w Burpie wszystko.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Szczegółowe błędy:</strong> "User with ID 5 not found" vs "Invalid ID". To pierwsze
+                        pozwala mapować bazę użytkowników.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>PUT/DELETE bez AuthZ:</strong> Często deweloperzy zabezpieczają GET, ale zapominają o
+                        metodach zmieniających stan.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QUIZ -->
+        <section id="quiz-section">
+            <h2>🎓 WERYFIKACJA WIEDZY</h2>
+            <div id="quiz-container"></div>
+        </section>
+
+        <footer>
+            <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Kurs Pentestera | Moduł 14</p>
+        </footer>
+    </div>
+
+    <!-- DANE DO QUIZU -->
+    <script>
+        const quizData = [
+            {
+                question: "Co to jest BOLA (Broken Object Level Authorization) w kontekście API?",
+                options: [
+                    "Błąd polegający na rzucaniu piłką.",
+                    "To inna nazwa na IDOR (Insecure Direct Object Reference). Sytuacja, gdy API pozwala na dostęp do obiektu (np. /orders/5) bez sprawdzenia, czy użytkownik jest jego właścicielem.",
+                    "Błąd w autoryzacji tokena JWT.",
+                    "Przepełnienie bufora."
+                ],
+                correct: 1,
+                explanation: "BOLA to nr 1 na liście OWASP API Security. To sytuacja, gdy backend ufa ID podanemu w URL, ignorując uprawnienia użytkownika."
+            },
+            {
+                type: "scenario",
+                question: "Wysyłasz żądanie rejestracji: {\"user\": \"ja\", \"pass\": \"123\"}. Atakujesz dodając pole: {\"user\": \"ja\", \"pass\": \"123\", \"role\": \"admin\"}. Serwer tworzy konto admina. Jak nazywa się ta podatność?",
+                options: [
+                    "SQL Injection",
+                    "Mass Assignment (lub Auto-Binding)",
+                    "XSS",
+                    "CSRF"
+                ],
+                correct: 1,
+                explanation: "Mass Assignment występuje, gdy framework automatycznie przypisuje dane z JSON-a wejściowego do pól w bazie danych, w tym do pól chronionych (jak 'role' czy 'balance')."
+            },
+            {
+                question: "Jaki kod HTTP powinien zwrócić serwer, gdy przekroczysz limit zapytań (Rate Limit)?",
+                options: [
+                    "200 OK",
+                    "404 Not Found",
+                    "429 Too Many Requests",
+                    "500 Internal Server Error"
+                ],
+                correct: 2,
+                explanation: "429 to standardowy kod informujący klienta: 'Zwolnij, wysyłasz za dużo żądań'. Brak tego kodu przy brute-force to czerwona flaga."
+            },
+            {
+                question: "Co to jest 'Excessive Data Exposure' (Nadmierne ujawnianie danych)?",
+                options: [
+                    "Sytuacja, gdy API zwraca pełny obiekt (np. z hashem hasła, adresem), licząc na to, że frontendowa aplikacja (React/Vue) ukryje te dane przed użytkownikiem.",
+                    "Wyciek bazy danych SQL.",
+                    "Wyświetlanie reklam.",
+                    "Zbyt długie logi serwera."
+                ],
+                correct: 0,
+                explanation: "To częsty błąd. Deweloperzy myślą: 'Frontend tego nie wyświetla, więc jest bezpiecznie'. Pentester patrzy w Burp Suite i widzi JSON z danymi wrażliwymi."
+            },
+            {
+                question: "Dlaczego używanie sekwencyjnych ID (np. /users/100, /users/101) jest ryzykowne w API?",
+                options: [
+                    "Bo zajmuje mało miejsca.",
+                    "Bo pozwala na łatwą enumerację (wyliczenie) wszystkich zasobów. Atakujący może w pętli ściągnąć całą bazę danych, jeśli znajdzie BOLA/IDOR.",
+                    "Bo bazy danych tego nie lubią.",
+                    "Bo to stary standard."
+                ],
+                correct: 1,
+                explanation: "Losowe ID (np. UUID) utrudniają atakującemu zgadywanie innych zasobów. Sekwencyjne ID to zaproszenie do scrapowania danych."
+            },
+            {
+                type: "scenario",
+                question: "Testujesz API. Endpoint GET /api/admin/users zwraca 403 Forbidden. Ale endpoint POST /api/admin/users/delete (bez sprawdzania uprawnień) działa i usuwa użytkownika. Co to za błąd?",
+                options: [
+                    "Function Level Authorization Bypass (Broken Function Level Authorization).",
+                    "XSS.",
+                    "Mass Assignment.",
+                    "Rate Limiting."
+                ],
+                correct: 0,
+                explanation: "Programiści często pamiętają o zabezpieczeniu 'widoków' (GET), ale zapominają o 'akcjach' (POST/PUT/DELETE) lub ukrytych endpointach administracyjnych."
+            },
+            {
+                question: "Która metoda HTTP jest najczęściej używana do AKTUALIZACJI zasobów w REST API?",
+                options: [
+                    "GET",
+                    "POST",
+                    "PUT lub PATCH",
+                    "TRACE"
+                ],
+                correct: 2,
+                explanation: "PUT zazwyczaj nadpisuje cały zasób, a PATCH aktualizuje tylko wybrane pola. Obie metody są krytyczne pod kątem testowania Mass Assignment."
+            },
+            {
+                question: "Dlaczego tokeny API nie powinny być przesyłane w URL (np. ?api_key=123)?",
+                options: [
+                    "Bo URL jest brzydki.",
+                    "Bo URL (wraz z parametrami) zapisuje się w historii przeglądarki, logach serwerów proxy i serwerów WWW, co prowadzi do wycieku tokena.",
+                    "Bo URL ma limit długości.",
+                    "Bo to spowalnia API."
+                ],
+                correct: 1,
+                explanation: "Sekrety (tokeny, klucze) powinny być przesyłane w nagłówkach (Authorization: Bearer) lub rzadziej w ciele POST, ale nigdy w URL."
+            },
+            {
+                type: "scenario",
+                question: "API zwraca błąd: 'SQL syntax error near...'. Co to oznacza?",
+                options: [
+                    "Błąd konfiguracji serwera.",
+                    "Podatność na SQL Injection (API Injection). API nie filtruje danych wejściowych przed wysłaniem ich do bazy.",
+                    "Brak pamięci RAM.",
+                    "Błąd certyfikatu SSL."
+                ],
+                correct: 1,
+                explanation: "API też są podatne na SQL Injection! Jeśli JSON input trafia do zapytania SQL bez sanityzacji, efekt jest ten sam co w zwykłym formularzu."
+            },
+            {
+                question: "Jak najlepiej zabezpieczyć się przed Mass Assignment?",
+                options: [
+                    "Używać DTO (Data Transfer Objects) i whitelistingu pól. Jawnie określać, które pola z JSON-a mogą być zapisane w bazie.",
+                    "Zablokować metodę PUT.",
+                    "Używać tylko XML.",
+                    "Szyfrować JSON."
+                ],
+                correct: 0,
+                explanation: "Nigdy nie używaj funkcji typu `User.create(request.body)`. Zawsze ręcznie mapuj pola: `user.name = req.body.name`, `user.email = req.body.email`."
+            }
+        ];
+    </script>
+
+    <script src="quiz.js"></script>
+
+</body>
+
+</html>

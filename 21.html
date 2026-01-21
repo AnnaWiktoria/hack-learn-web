@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lekcja 21: Audit Scope & Legal - Hack & Learn</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Akcent: Legal Slate (Professionalism / Rules) */
+        :root {
+            --accent: #607d8b;
+            --accent-glow: rgba(96, 125, 139, 0.3);
+            --info: #40c4ff;
+        }
+        
+        .scope-in { color: #00ff00; font-weight: bold; }
+        .scope-out { color: #ff0055; font-weight: bold; }
+        
+        .contract-paper {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            color: #ccc;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>RULES OF ENGAGEMENT</h1>
+        <p>MODUŁ 21: Zakres audytu, Prawo i Granice odpowiedzialności</p>
+    </header>
+
+    <!-- 1. PRZYGOTOWANIE -->
+    <section>
+        <h2>> RÓŻNICA MIĘDZY HAKEREM A PENTESTEREM</h2>
+        <p>Jedyna różnica to <strong>PISEMNA ZGODA</strong>. Zanim wyślesz pierwszy pakiet, musisz mieć ustalony "Scope" (Zakres).</p>
+        
+        <div class="card">
+            <h3>SCOPE: CO WOLNO, A CZEGO NIE?</h3>
+            <p>Klient rzadko mówi "hakuj wszystko". Zazwyczaj dostajesz listę.</p>
+            <div class="contract-paper">
+                <strong>IN SCOPE (Wolno testować):</strong><br>
+                <span class="scope-in">✓</span> Domena: app.firma.pl<br>
+                <span class="scope-in">✓</span> API: api.firma.pl<br>
+                <span class="scope-in">✓</span> Użytkownicy testowi (User A, User B)<br>
+                <br>
+                <strong>OUT OF SCOPE (Zabronione):</strong><br>
+                <span class="scope-out">❌</span> Strona korporacyjna (www.firma.pl) - to tylko wizytówka.<br>
+                <span class="scope-out">❌</span> Ataki DoS / DDoS (nie chcemy położyć biznesu).<br>
+                <span class="scope-out">❌</span> Phishing na pracownikach.<br>
+                <span class="scope-out">❌</span> Infrastruktura dostawcy chmury (np. atakowanie serwerów AWS).
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. TYPY ŚRODOWISK -->
+    <section>
+        <h2>> PRODUKCJA VS STAGING</h2>
+        <p>Gdzie testować? To kluczowa decyzja biznesowa.</p>
+
+        <div class="card">
+            <h3>1. ŚRODOWISKO TESTOWE (STAGING / UAT)</h3>
+            <p><strong style="color:var(--success)">ZALECANE.</strong> Kopia produkcji przeznaczona do psucia.</p>
+            <ul>
+                <li><strong>Zalety:</strong> Możesz używać agresywnych skanerów, kasować dane, testować RCE bez strachu.</li>
+                <li><strong>Wady:</strong> Czasami konfiguracja różni się od produkcji (np. słabszy WAF, brak debugowania).</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>2. PRODUKCJA (PROD)</h3>
+            <p><strong style="color:var(--danger)">RYZYKOWNE.</strong> Żywy organizm firmy.</p>
+            <ul>
+                <li><strong>Zasady:</strong>
+                    <ul>
+                        <li>Tylko testy niedestrukcyjne (żadnego usuwania bazy!).</li>
+                        <li>Testy w godzinach najmniejszego ruchu (w nocy).</li>
+                        <li>Dodawanie nagłówka do zapytań (np. <code>X-Pentest: TwojaFirma</code>), żeby administratorzy nie zablokowali Cię, widząc ataki w logach.</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- 3. SZYFROWANIE KOMUNIKACJI -->
+    <section>
+        <h2>> BEZPIECZEŃSTWO PENTESTERA</h2>
+        <p>Podczas audytu przetwarzasz wrażliwe dane klienta (znalezione luki, zrzuty bazy). Masz obowiązek je chronić.</p>
+        <div class="card">
+            <h3>DOBRE PRAKTYKI</h3>
+            <ul>
+                <li><strong>Szyfrowany dysk:</strong> Laptop audytora musi mieć BitLocker / LUKS.</li>
+                <li><strong>Raportowanie:</strong> Nigdy nie wysyłaj raportu PDF mailem bez hasła. Używaj szyfrowanych kanałów (Signal, PGP, Portal klienta).</li>
+                <li><strong>Cleaning up:</strong> Po zakończeniu testów musisz "posprzątać" (usunąć wgrane webshelle, stworzone konta admina, pliki testowe).</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- CHECKLIST -->
+    <section>
+        <h2>AUDIT CHECKLIST: PRE-ENGAGEMENT 📋</h2>
+        <div class="card checklist-card">
+            <div class="checklist-item">
+                <span class="check-icon">📝</span>
+                <div><strong>Zgoda (Letter of Authorization):</strong> Dokument podpisany przez osobę decyzyjną (CTO/CEO), który chroni Cię przed policją. Miej go zawsze przy sobie.</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">📝</span>
+                <div><strong>Backup:</strong> Upewnij się, że klient ma backup bazy danych PRZED rozpoczęciem testów (zwłaszcza na produkcji).</div>
+            </div>
+            <div class="checklist-item">
+                <span class="check-icon">📝</span>
+                <div><strong>Whitelisting:</strong> Czy Twoje IP zostało dodane do wyjątków w firmowym firewallu/WAF? Inaczej testujesz WAF, a nie aplikację.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz-section">
+        <h2>🎓 AUDYT: PODEJMIJ DECYZJĘ</h2>
+        <div id="quiz-container"></div>
+    </section>
+
+    <footer>
+        <p style="text-align: center; margin-top: 50px; color: #555;">&copy; 2026 Hack & Learn: Web Edition | Moduł 21</p>
+    </footer>
+</div>
+
+<!-- DANE DO QUIZU -->
+<script>
+    const quizData = [
+        {
+            type: "scenario",
+            question: "Klient zamawia pentesty 'Black Box' aplikacji sklepu internetowego. W umowie (Scope) jest napisane: 'Zakaz testowania panelu administratora'. Podczas skanowania znajdujesz /admin z domyślnym hasłem 'admin:admin'. Co robisz?",
+            options: [
+                "Loguję się, pobieram bazę danych jako dowód (PoC) i zgłaszam w raporcie.",
+                "Zmieniam hasło admina, żeby nikt inny się nie włamał, i informuję klienta.",
+                "Przerywam testowanie tego elementu. Dokumentuję fakt istnienia panelu i słabego hasła, ale NIE EKSPLORUJĘ DALEJ, ponieważ wykracza to poza Scope.",
+                "Wyłączam serwer."
+            ],
+            correct: 2,
+            explanation: "To test na profesjonalizm. Złamanie Scope'u to złamanie umowy. Możesz narazić klienta na straty lub problemy prawne. Zgłoś znalezisko, ale nie wchodź głębiej bez nowej zgody."
+        },
+        {
+            question: "Dlaczego testowanie środowiska produkcyjnego (PROD) jest bardziej ryzykowne niż środowiska testowego (STAGING)?",
+            options: [
+                "Bo produkcja jest lepiej zabezpieczona.",
+                "Bo na produkcji mogą znajdować się prawdziwe dane klientów (RODO), a agresywne testy mogą spowodować przestój biznesu (DoS) lub uszkodzenie danych.",
+                "Bo na produkcji nie działa SQL Injection.",
+                "Bo deweloperzy widzą logi."
+            ],
+            correct: 1,
+            explanation: "Jako pentester musisz realizować cel 'Do No Harm'. Usunięcie bazy na produkcji to katastrofa i koniec kariery audytora."
+        },
+        {
+            type: "scenario",
+            question: "Klient prosi o testy aplikacji hostowanej na współdzielonym hostingu (Shared Hosting). Co musisz sprawdzić przed startem?",
+            options: [
+                "Czy hosting jest tani.",
+                "Czy klient posiada pisemną zgodę od dostawcy hostingu na przeprowadzenie testów bezpieczeństwa.",
+                "Czy strona używa WordPressa.",
+                "Jaki jest ping do serwera."
+            ],
+            correct: 1,
+            explanation: "Współdzielony hosting oznacza, że na jednym serwerze są setki firm. Atakując klienta, możesz przypadkiem 'położyć' sąsiadów. Zgoda providera jest niezbędna."
+        },
+        {
+            question: "Co to jest 'Letter of Authorization' (LoA)?",
+            options: [
+                "List miłosny do hakera.",
+                "Formalny dokument podpisany przez właściciela systemu, upoważniający pentestera do wykonywania ataków w określonym czasie i zakresie. To Twoja 'polisa ubezpieczeniowa'.",
+                "Raport z audytu.",
+                "Faktura za usługi."
+            ],
+            correct: 1,
+            explanation: "Bez LoA, Twoje działania są w świetle prawa nielegalne (art. 269b KK w Polsce). Nigdy nie zaczynaj pracy 'na słowo'."
+        },
+        {
+            type: "scenario",
+            question: "Testujesz aplikację na produkcji. Klient dzwoni, że system działa wolno. Używasz automatycznego skanera (np. Nessus/Burp) z domyślnymi ustawieniami. Co zrobiłeś źle?",
+            options: [
+                "Nic, klient ma słaby serwer.",
+                "Nie dostosowałeś agresywności skanera (Rate Limit / Threads) do środowiska produkcyjnego, powodując niezamierzony atak DoS.",
+                "Powinieneś użyć Kali Linux.",
+                "Nie włączyłeś VPN."
+            ],
+            correct: 1,
+            explanation: "Profesjonalista zawsze kalibruje narzędzia. Domyślne ustawienia skanerów są często zbyt agresywne dla środowisk produkcyjnych."
+        },
+        {
+            question: "Dlaczego dodawanie własnego nagłówka HTTP (np. `X-Pentest: Audit-Agency`) podczas testów jest dobrą praktyką?",
+            options: [
+                "Zwiększa siłę ataku.",
+                "Pozwala zespołowi Blue Team (obrońcom) odróżnić Twoje testy od prawdziwego ataku hakerskiego w logach i uniknąć niepotrzebnego alarmu.",
+                "Szyfruje połączenie.",
+                "Jest wymagane przez protokół TCP."
+            ],
+            correct: 1,
+            explanation: "To element współpracy. Dzięki temu admini widząc 1000 błędów 500 w logach wiedzą: 'Spokojnie, to audyt', zamiast budzić zespół reagowania incydentów w nocy."
+        },
+        {
+            type: "scenario",
+            question: "Znalazłeś krytyczny błąd (RCE) w piątek o 16:55. Co robisz?",
+            options: [
+                "Idę do domu, napiszę raport w poniedziałek.",
+                "Natychmiast kontaktuję się z klientem (zgodnie z procedurą awaryjną w umowie), aby mogli zabezpieczyć system przed weekendem.",
+                "Publikuję błąd na Twitterze.",
+                "Szukam kolejnych błędów."
+            ],
+            correct: 1,
+            explanation: "Krytyczne błędy wymagają natychmiastowej reakcji (Hot fix). Czekanie do poniedziałku naraża klienta na ryzyko ataku przez cały weekend."
+        },
+        {
+            question: "Co oznacza termin 'Clean-up' (Sprzątanie) po pentestach?",
+            options: [
+                "Usunięcie raportu.",
+                "Usunięcie wszystkich artefaktów stworzonych podczas testów: kont testowych, wgranych plików (webshelli), wpisów w bazie danych (np. 'test' w komentarzach).",
+                "Formatowanie dysku.",
+                "Wyczyszczenie historii przeglądarki."
+            ],
+            correct: 1,
+            explanation: "Pozostawienie webshella na serwerze klienta po audycie to skrajna nieodpowiedzialność. To jak zostawienie otwartych drzwi po sprawdzeniu zamków."
+        }
+    ];
+</script>
+
+<script src="quiz.js"></script>
+
+</body>
+</html>
