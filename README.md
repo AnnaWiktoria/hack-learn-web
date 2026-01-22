@@ -98,9 +98,7 @@ Jeśli chcesz uruchomić projekt na własnym komputerze:
 
 ## 💡 Dlaczego to stworzyłam?
 
-Jako osoba zainteresowana cyberbezpieczeństwem, zauważyłam, że wiele materiałów skupia się wyłącznie na narzędziach (Kali Linux, Metasploit). Brakowało mi źródła, które uczyłoby **strategii audytu** i **myślenia analitycznego** przed uruchomieniem skanera.
-
-Ten projekt jest moim "poligonem doświadczalnym" oraz dowodem kompetencji w zakresie rozumienia bezpieczeństwa aplikacji webowych od strony ofensywnej (Red) i defensywnej (Blue).
+Utrwalając sobie wiedzę z zakresu bezpieczeństwa aplikacji webowych zauważyłam, że wiele materiałów skupia się wyłącznie na narzędziach (Kali Linux, Metasploit). Brakowało mi źródła, które uczyłoby **strategii audytu** i **myślenia analitycznego** przed uruchomieniem skanera. Poprosiłam Gemini o zadawanie mi pytań i wyjaśnianie niektórych zagadnień. Było to na tyle fajne, że postanowiłam na tej bazie zrobić niniejszy kurs.
 
 ---
 
